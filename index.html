@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Another Product Invented – Penti Grammai (Five Lines)</title>
+  <title>Another Product Invented – Penti Grammai</title>
   <style>
     body {
       margin: 0;
@@ -62,31 +62,32 @@
 </head>
 <body>
 
-  <h1>Another Product Invented<br>Penti Grammai (Five Lines)</h1>
+  <h1>Another Product Invented<br>Penti Grammai</h1>
 
   <div id="gameContainer">
     <canvas id="gameCanvas" width="360" height="360"></canvas>
 
     <div id="menuScreen" class="overlayScreen" style="display:flex;">
-      <button id="newGameBtn">New Game</button>
-      <button id="instructionsBtn">Instructions</button>
+      <button onclick="startGame()">New Game</button>
+      <button onclick="showInstructions()">Instructions</button>
     </div>
 
     <div id="instructionsScreen" class="overlayScreen">
-      <h2>How to Play</h2>
-      <p>🔄 **Move clockwise around the board**.</p>
-      <p>🔵 **Your pieces (blue) start at the bottom-left**.</p>
-      <p>🔴 **AI pieces (red) start at the top-right**.</p>
-      <p>🟢 **Click your piece, then click a valid move**.</p>
-      <p>⚔ **Landing on an opponent's piece captures it**.</p>
-      <p>🏁 **First to move all pieces around the track wins!**</p>
+      <h2>How to Play Penti Grammai</h2>
+      <p>🔸 All your pieces start on the third line (middle of the board), on your side.</p>
+      <p>🔸 Move your pieces anti-clockwise around the board based on dice rolls.</p>
+      <p>🔸 You cannot move to a space if it's already occupied.</p>
+      <p>🔸 If you have no valid moves, your turn is skipped.</p>
+      <p>🔸 You can only enter home (center) if all your pieces have left your starting line.</p>
+      <p>🔸 You cannot enter home if the entry point is blocked.</p>
+      <p>🔸 First to get all pieces home wins!</p>
       <button onclick="showScreen('menuScreen')">Back to Menu</button>
     </div>
 
     <div id="gameOverScreen" class="overlayScreen">
       <h2 id="resultText"></h2>
-      <button id="gameOverNewGame">New Game</button>
-      <p><strong>Press [M] to return to the Main Menu.</strong></p>
+      <button onclick="startGame()">New Game</button>
+      <button onclick="showScreen('menuScreen')">Menu</button>
     </div>
   </div>
 
@@ -95,17 +96,12 @@
   <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-
-    const track = [
-      {x: 60, y: 300}, {x: 120, y: 300}, {x: 180, y: 300}, {x: 240, y: 300}, {x: 300, y: 300},
-      {x: 300, y: 240}, {x: 300, y: 180}, {x: 300, y: 120}, {x: 300, y: 60},
-      {x: 240, y: 60}, {x: 180, y: 60}, {x: 120, y: 60}, {x: 60, y: 60},
-      {x: 60, y: 120}, {x: 60, y: 180}, {x: 60, y: 240}
-    ];
-
-    let playerPieces = [0, 1, 2, 3, 4];
-    let aiPieces = [8, 9, 10, 11, 12];
-    let selectedPiece = null;
+    const track = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
+    let playerPieces = [0,1,2,3,4]; // starting indexes on one side of central line
+    let aiPieces = [8,9,10,11,12]; // AI on the other side
+    let homePlayer = [], homeAI = [];
+    let currentPlayer = 'player';
+    let diceRoll = 0;
     let gameActive = true;
 
     function showScreen(id){
@@ -113,101 +109,136 @@
       if(id) document.getElementById(id).style.display='flex';
     }
 
+    function showInstructions(){
+      showScreen('instructionsScreen');
+    }
+
+    function startGame(){
+      playerPieces = [0,1,2,3,4];
+      aiPieces = [8,9,10,11,12];
+      homePlayer = [];
+      homeAI = [];
+      currentPlayer = 'player';
+      gameActive = true;
+      showScreen('');
+      drawBoard();
+      setTimeout(playerTurn, 500);
+    }
+
     function drawBoard(){
       ctx.clearRect(0,0,360,360);
       ctx.strokeStyle = "#000";
       ctx.lineWidth = 2;
 
-      for(let i = 0; i < track.length; i++){
+      for(let i=0; i<5; i++){
         ctx.beginPath();
-        ctx.arc(track[i].x, track[i].y, 10, 0, 2 * Math.PI);
-        ctx.fillStyle = "#000";
-        ctx.fill();
+        ctx.moveTo(60, 60 + i*60);
+        ctx.lineTo(300, 60 + i*60);
+        ctx.stroke();
       }
 
-      playerPieces.forEach(i=>{
-        ctx.beginPath();
-        ctx.arc(track[i].x, track[i].y, 15, 0, 2 * Math.PI);
-        ctx.fillStyle = selectedPiece === i ? "#00ccff" : "#0099ff";
-        ctx.fill();
-      });
-
-      aiPieces.forEach(i=>{
-        ctx.beginPath();
-        ctx.arc(track[i].x, track[i].y, 15, 0, 2 * Math.PI);
-        ctx.fillStyle = "#ff4444";
-        ctx.fill();
-      });
-    }
-
-    canvas.onclick = e => {
-      if (!gameActive) return;
-      const rect = canvas.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-
-      let clickedIndex = -1;
-      track.forEach((pos, i)=>{
-        const dx = pos.x - mx;
-        const dy = pos.y - my;
-        if (Math.sqrt(dx * dx + dy * dy) < 15) clickedIndex = i;
-      });
-
-      if (clickedIndex === -1) return;
-
-      if (selectedPiece !== null) {
-        const from = selectedPiece;
-        const to = clickedIndex;
-        if (playerPieces.includes(from) && !playerPieces.includes(to)) {
-          if (track.indexOf(to) > track.indexOf(from)) {
-            const aiCaptureIndex = aiPieces.indexOf(to);
-            if (aiCaptureIndex !== -1) aiPieces.splice(aiCaptureIndex, 1);
-            playerPieces[playerPieces.indexOf(from)] = to;
-            selectedPiece = null;
-            drawBoard();
-            checkGameOver();
-            if (gameActive) setTimeout(aiMove, 700);
-            return;
-          }
-        }
-        selectedPiece = null;
-        drawBoard();
-      } else {
-        if (playerPieces.includes(clickedIndex)) {
-          selectedPiece = clickedIndex;
-          drawBoard();
-        }
+      for(let i=0; i<playerPieces.length; i++){
+        drawPiece(track[playerPieces[i]], 'blue', i);
       }
-    };
-
-    function aiMove(){
-      if (!gameActive) return;
-      let moveIndex = aiPieces.findIndex(p => p < track.length - 1);
-      if (moveIndex !== -1) {
-        aiPieces[moveIndex] += 1;
-        drawBoard();
-        checkGameOver();
+      for(let i=0; i<aiPieces.length; i++){
+        drawPiece(track[aiPieces[i]], 'red', i);
+      }
+      for(let i=0; i<homePlayer.length; i++){
+        drawHome('blue', i);
+      }
+      for(let i=0; i<homeAI.length; i++){
+        drawHome('red', i);
       }
     }
 
-    function checkGameOver(){
-      if (playerPieces.every(i => i >= track.length - 1)) {
+    function drawPiece(pos, color, index){
+      let x = 90 + (index%2)*180;
+      let y = 60 + (index%5)*60;
+      ctx.beginPath();
+      ctx.arc(x, y, 20, 0, 2 * Math.PI);
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    function drawHome(color, index){
+      let x = 180;
+      let y = 60 + index*30;
+      ctx.beginPath();
+      ctx.arc(x, y, 10, 0, 2 * Math.PI);
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    function playerTurn(){
+      if (!gameActive) return;
+      diceRoll = Math.floor(Math.random()*6)+1;
+      let movable = playerPieces.filter(p => !isBlocked(p, diceRoll, playerPieces, aiPieces));
+      if (movable.length === 0) {
+        currentPlayer = 'ai';
+        setTimeout(aiTurn, 1000);
+        return;
+      }
+      let choice = movable.length === 1 ? movable[0] : movable[0]; // auto for now
+      movePiece(choice, diceRoll, 'player');
+    }
+
+    function aiTurn(){
+      if (!gameActive) return;
+      diceRoll = Math.floor(Math.random()*6)+1;
+      let movable = aiPieces.filter(p => !isBlocked(p, diceRoll, aiPieces, playerPieces));
+      if (movable.length === 0) {
+        currentPlayer = 'player';
+        setTimeout(playerTurn, 1000);
+        return;
+      }
+      let choice = movable[Math.floor(Math.random()*movable.length)];
+      movePiece(choice, diceRoll, 'ai');
+    }
+
+    function isBlocked(pos, roll, ownPieces, opponent){
+      let newPos = pos + roll;
+      return ownPieces.includes(newPos) || opponent.includes(newPos) || newPos >= track.length;
+    }
+
+    function movePiece(pos, roll, who){
+      let newPos = pos + roll;
+      if (newPos >= track.length) return;
+
+      let own = who === 'player' ? playerPieces : aiPieces;
+      let opponent = who === 'player' ? aiPieces : playerPieces;
+      let home = who === 'player' ? homePlayer : homeAI;
+
+      if (opponent.includes(newPos)) {
+        opponent.splice(opponent.indexOf(newPos),1);
+      }
+
+      own[own.indexOf(pos)] = newPos;
+
+      if (newPos === track.length - 1 && own.every(p => p !== 0 && p !== 1 && p !== 2 && p !== 3 && p !== 4)) {
+        home.push(newPos);
+        own.splice(own.indexOf(newPos),1);
+      }
+
+      drawBoard();
+      checkWin();
+      currentPlayer = who === 'player' ? 'ai' : 'player';
+      setTimeout(currentPlayer === 'player' ? playerTurn : aiTurn, 1000);
+    }
+
+    function checkWin(){
+      if (homePlayer.length === 5) {
         gameActive = false;
         document.getElementById('resultText').textContent = "You Win!";
         showScreen('gameOverScreen');
       }
-      if (aiPieces.every(i => i <= 0)) {
+      if (homeAI.length === 5) {
         gameActive = false;
         document.getElementById('resultText').textContent = "You Lose!";
         showScreen('gameOverScreen');
       }
     }
 
-    document.getElementById('newGameBtn').onclick = () => { gameActive = true; drawBoard(); showScreen(''); };
-    document.getElementById('instructionsBtn').onclick = () => showScreen('instructionsScreen');
-
-    drawBoard();
+    showScreen('menuScreen');
   </script>
-
 </body>
 </html>
