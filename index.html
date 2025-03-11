@@ -45,6 +45,10 @@
       box-sizing: border-box;
       z-index: 10;
     }
+    .instructionsPage {
+      display: none;
+      margin-bottom: 10px;
+    }
     button {
       font-size: 18px;
       padding: 10px 20px;
@@ -80,11 +84,32 @@
     </div>
 
     <div id="instructionsScreen" class="overlayScreen">
-      <h2>How to Play Penti Grammai</h2>
-      <p>Each player has 5 pieces. Pieces move forward one point per turn.</p>
-      <p>You can capture an opponent’s piece by landing on it.</p>
-      <p>First to get all pieces to the end wins. Click a piece, then click where to move.</p>
-      <p><strong>Press [M] to return to the Main Menu.</strong></p>
+      <div id="instructionPage1" class="instructionsPage" style="display:block;">
+        <h2>How to Play - Page 1</h2>
+        <p>The game is called <strong>Penti Grammai</strong>, which means "Five Lines".</p>
+        <p>The board has 5 horizontal lines, each with 2 points (10 total).</p>
+        <p>You and the AI each start with 5 pieces.</p>
+      </div>
+      <div id="instructionPage2" class="instructionsPage">
+        <h2>How to Play - Page 2</h2>
+        <p>Your pieces are <strong>blue circles on the left</strong>.</p>
+        <p>The AI's pieces are <strong>red circles on the right</strong>.</p>
+        <p><strong>Click on one of your blue pieces</strong> to select it.</p>
+        <p>Then <strong>click a highlighted forward point</strong> to move.</p>
+      </div>
+      <div id="instructionPage3" class="instructionsPage">
+        <h2>How to Play - Page 3</h2>
+        <p>You can move forward 1 or 2 points in a straight line.</p>
+        <p>You cannot move backward.</p>
+        <p>You can <strong>capture an opponent</strong> by landing on their piece.</p>
+        <p><strong>First player to reach the end or remove all opponent pieces wins!</strong></p>
+        <p><em>Press [M] anytime to return to the Main Menu.</em></p>
+      </div>
+      <div>
+        <button id="prevInstruction">Previous</button>
+        <button id="nextInstruction">Next</button>
+        <button onclick="showScreen('menuScreen')">Back to Menu</button>
+      </div>
     </div>
 
     <div id="gameOverScreen" class="overlayScreen">
@@ -97,6 +122,28 @@
   <img id="logo" src="logo.png" alt="Logo">
 
   <script>
+    let currentInstructionPage = 1;
+    const totalPages = 3;
+
+    function showInstructionsPage(page) {
+      currentInstructionPage = page;
+      for (let i = 1; i <= totalPages; i++) {
+        document.getElementById('instructionPage' + i).style.display = (i === page) ? 'block' : 'none';
+      }
+    }
+
+    document.getElementById('nextInstruction').onclick = () => {
+      if (currentInstructionPage < totalPages) {
+        showInstructionsPage(currentInstructionPage + 1);
+      }
+    };
+
+    document.getElementById('prevInstruction').onclick = () => {
+      if (currentInstructionPage > 1) {
+        showInstructionsPage(currentInstructionPage - 1);
+      }
+    };
+
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const positions = [];
@@ -256,7 +303,7 @@
     }
 
     document.getElementById('newGameBtn').onclick=()=>showScreen('difficultyScreen');
-    document.getElementById('instructionsBtn').onclick=()=>showScreen('instructionsScreen');
+    document.getElementById('instructionsBtn').onclick=()=>{showInstructionsPage(1);showScreen('instructionsScreen');};
     document.getElementById('easyBtn').onclick=()=>{difficulty='easy';setupBoard();showScreen('');};
     document.getElementById('mediumBtn').onclick=()=>{difficulty='medium';setupBoard();showScreen('');};
     document.getElementById('hardBtn').onclick=()=>{difficulty='hard';setupBoard();showScreen('');};
@@ -268,4 +315,3 @@
 
 </body>
 </html>
-
