@@ -1,1 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Another Product Invented – Penti Grammai (Five Lines)</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      margin: 1rem 0 0.5rem;
+      text-align: center;
+      line-height: 1.2;
+    }
+    #gameContainer {
+      position: relative;
+      width: 360px;
+      max-width: 100%;
+      margin-bottom: 10px;
+    }
+    canvas {
+      display: block;
+      background: #eee;
+      width: 100%;
+      height: auto;
+      border: 2px solid #333;
+      touch-action: none;
+    }
+    .overlayScreen {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255,255,255,0.95);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
+      z-index: 10;
+    }
+    button {
+      font-size: 18px;
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+    }
+    #logo {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      max-width: 100px;
+      z-index: 2000;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Another Product Invented<br>Penti Grammai (Five Lines)</h1>
+
+  <div id="gameContainer">
+    <canvas id="gameCanvas" width="360" height="360"></canvas>
+
+    <div id="menuScreen" class="overlayScreen" style="display:flex;">
+      <button id="newGameBtn">New Game</button>
+      <button id="instructionsBtn">Instructions</button>
+    </div>
+
+    <div id="difficultyScreen" class="overlayScreen">
+      <p>Select Difficulty:</p>
+      <button id="easyBtn">Easy</button>
+      <button id="mediumBtn">Medium</button>
+      <button id="hardBtn">Hard</button>
+    </div>
+
+    <div id="instructionsScreen" class="overlayScreen">
+      <h2>How to Play Penti Grammai</h2>
+      <p>Each player has 5 pieces. Pieces move forward one point per turn.</p>
+      <p>You can capture an opponent’s piece by landing on it.</p>
+      <p>First to get all pieces to the end wins. Click a piece, then click where to move.</p>
+      <p><strong>Press [M] to return to the Main Menu.</strong></p>
+    </div>
+
+    <div id="gameOverScreen" class="overlayScreen">
+      <h2 id="resultText"></h2>
+      <button id="gameOverNewGame">New Game</button>
+      <p><strong>Press [M] to return to the Main Menu.</strong></p>
+    </div>
+  </div>
+
+  <img id="logo" src="logo.png" alt="Logo">
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const positions = [];
+    let playerPieces = [], aiPieces = [];
+    let selectedPiece = null;
+    let gameActive = false;
+    let difficulty = 'easy';
+
+    function showScreen(id){
+      document.querySelectorAll('.overlayScreen').forEach(s=>s.style.display='none');
+      if(id) document.getElementById(id).style.display='flex';
+    }
+
+    function setupBoard(){
+      positions.length = 0;
+      for(let i=0;i<5;i++){
+        positions.push({x:90, y:60+i*60});
+        positions.push({x:270, y:60+i*60});
+      }
+
+      playerPieces = [0,2,4,6,8];
+      aiPieces = [1,3,5,7,9];
+      gameActive = true;
+      drawBoard();
+      if(difficulty !== 'easy') setTimeout(aiMove, 800);
+    }
+
+    function drawBoard(){
+      ctx.clearRect(0,0,360,360);
+      ctx.strokeStyle="#000";
+      ctx.lineWidth=2;
+      for(let i=0;i<5;i++){
+        ctx.beginPath();
+        ctx.moveTo(60, 60+i*60);
+        ctx.lineTo(300, 60+i*60);
+        ctx.stroke();
+      }
+      for(let i=0;i<positions.length;i++){
+        ctx.beginPath();
+        ctx.arc(positions[i].x, positions[i].y, 12, 0, 2*Math.PI);
+        ctx.fillStyle = '#000';
+        ctx.fill();
+      }
+      playerPieces.forEach(i=>{
+        ctx.beginPath();
+        ctx.arc(positions[i].x, positions[i].y, 20, 0, 2*Math.PI);
+        ctx.fillStyle = selectedPiece===i?'#00ccff':'#0099ff';
+        ctx.fill();
+      });
+      aiPieces.forEach(i=>{
+        ctx.beginPath();
+        ctx.arc(positions[i].x, positions[i].y, 20, 0, 2*Math.PI);
+        ctx.fillStyle = '#ff4444';
+        ctx.fill();
+      });
+    }
+
+    canvas.onclick = e => {
+      if (!gameActive) return;
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+
+      let clickedIndex = -1;
+      positions.forEach((pos, i)=>{
+        const dx = pos.x - mx;
+        const dy = pos.y - my;
+        if (Math.sqrt(dx*dx+dy*dy)<20) clickedIndex = i;
+      });
+
+      if (clickedIndex === -1) return;
+
+      if (selectedPiece !== null) {
+        const from = selectedPiece;
+        const to = clickedIndex;
+        if (playerPieces.includes(from) && !playerPieces.includes(to)) {
+          if (isLegalMove(from, to, 'player')) {
+            const aiCaptureIndex = aiPieces.indexOf(to);
+            if (aiCaptureIndex !== -1) aiPieces.splice(aiCaptureIndex,1);
+            playerPieces[playerPieces.indexOf(from)] = to;
+            selectedPiece = null;
+            drawBoard();
+            checkGameOver();
+            if(gameActive) setTimeout(aiMove, 700);
+            return;
+          }
+        }
+        selectedPiece = null;
+        drawBoard();
+      } else {
+        if (playerPieces.includes(clickedIndex)) {
+          selectedPiece = clickedIndex;
+          drawBoard();
+        }
+      }
+    };
+
+    function isLegalMove(from, to, who){
+      if (Math.abs(from - to) !== 1 && Math.abs(from - to) !== 2) return false;
+      if (positions[to].x <= positions[from].x) return false;
+      if (who === 'player' && aiPieces.includes(to)) return true;
+      if (who === 'player' && !aiPieces.includes(to) && !playerPieces.includes(to)) return true;
+      if (who === 'ai' && playerPieces.includes(to)) return true;
+      if (who === 'ai' && !aiPieces.includes(to) && !playerPieces.includes(to)) return true;
+      return false;
+    }
+
+    function aiMove(){
+      if (!gameActive) return;
+      let moves = [];
+
+      aiPieces.forEach(from=>{
+        [from+1, from+2].forEach(to=>{
+          if (to<10 && isLegalMove(from, to, 'ai')) {
+            let moveType = playerPieces.includes(to) ? 'capture' : 'move';
+            moves.push({from, to, moveType});
+          }
+        });
+      });
+
+      let move;
+      if (difficulty==='easy') {
+        move = moves[Math.floor(Math.random()*moves.length)];
+      } else if (difficulty==='medium') {
+        let captures = moves.filter(m=>m.moveType==='capture');
+        move = captures.length ? captures[Math.floor(Math.random()*captures.length)] : moves[Math.floor(Math.random()*moves.length)];
+      } else if (difficulty==='hard') {
+        let captures = moves.filter(m=>m.moveType==='capture');
+        if (captures.length) {
+          move = captures[Math.floor(Math.random()*captures.length)];
+        } else {
+          move = moves.sort((a,b)=>b.to - a.to)[0];
+        }
+      }
+
+      if (move) {
+        const playerCaptureIndex = playerPieces.indexOf(move.to);
+        if (playerCaptureIndex !== -1) playerPieces.splice(playerCaptureIndex,1);
+        aiPieces[aiPieces.indexOf(move.from)] = move.to;
+        drawBoard();
+        checkGameOver();
+      }
+    }
+
+    function checkGameOver(){
+      const playerDone = playerPieces.every(i=>i>=8);
+      const aiDone = aiPieces.every(i=>i<=1);
+      if(playerPieces.length===0 || aiDone){
+        gameActive=false;
+        document.getElementById('resultText').textContent='You Lose!';
+        showScreen('gameOverScreen');
+      } else if(aiPieces.length===0 || playerDone){
+        gameActive=false;
+        document.getElementById('resultText').textContent='You Win!';
+        showScreen('gameOverScreen');
+      }
+    }
+
+    document.getElementById('newGameBtn').onclick=()=>showScreen('difficultyScreen');
+    document.getElementById('instructionsBtn').onclick=()=>showScreen('instructionsScreen');
+    document.getElementById('easyBtn').onclick=()=>{difficulty='easy';setupBoard();showScreen('');};
+    document.getElementById('mediumBtn').onclick=()=>{difficulty='medium';setupBoard();showScreen('');};
+    document.getElementById('hardBtn').onclick=()=>{difficulty='hard';setupBoard();showScreen('');};
+    document.getElementById('gameOverNewGame').onclick=()=>showScreen('difficultyScreen');
+    document.addEventListener('keydown',e=>{if(e.key.toLowerCase()==='m')showScreen('menuScreen');});
+
+    showScreen('menuScreen');
+  </script>
+
+</body>
+</html>
 
