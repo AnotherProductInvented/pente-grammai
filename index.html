@@ -107,65 +107,111 @@
   </div>
 
   <!-- Custom Dice (for development) -->
-  <div id="dice">Dice: <span id="diceResult">0</span></div>
-
-  <img id="logo" src="logo.png" alt="Logo">
+    <img id="logo" src="logo.png" alt="Logo">
 
   <script>
     // Game Logic
     let canvas = document.getElementById('gameCanvas'),
         ctx = canvas.getContext('2d'),
-        board = [], // 5x5 grid
         playerPieces = [], // Player's pieces
         aiPieces = [], // AI's pieces
         currentPlayer = 'player', // Player starts first
         gameActive = false,
         difficulty = 'easy';
 
+const lineCount = 5;
+const spacesPerLine = 7;
+let trackPath = [];
+
+// Create a basic anti-clockwise movement path
+function createTrackPath() {
+  trackPath = [];
+
+  // Bottom line (left to right)
+  for (let i = 0; i < spacesPerLine; i++) {
+    trackPath.push({ line: 4, pos: i });
+  }
+
+  // Right line (bottom to top, skip bottom already used)
+  for (let i = 3; i >= 0; i--) {
+    trackPath.push({ line: i, pos: spacesPerLine - 1 });
+  }
+
+  // Top line (right to left)
+  for (let i = spacesPerLine - 2; i >= 0; i--) {
+    trackPath.push({ line: 0, pos: i });
+  }
+
+  // Left line (top to bottom, skip top already used)
+  for (let i = 1; i < 4; i++) {
+    trackPath.push({ line: i, pos: 0 });
+  }
+
+  // Center line (middle forward, finish zone)
+  for (let i = 1; i < spacesPerLine - 1; i++) {
+    trackPath.push({ line: 2, pos: i });
+  }
+}
+
+
     // Initialize the board
-    function initializeBoard() {
-      board = Array.from({ length: 5 }, () => Array(5).fill(null));
-      playerPieces = [{ x: 2, y: 0 }, { x: 2, y: 1 }, { x: 2, y: 2 }]; // Starting positions
-      aiPieces = [{ x: 2, y: 4 }, { x: 2, y: 3 }, { x: 2, y: 2 }]; // Starting positions
-      currentPlayer = 'player';
-      gameActive = true;
-      drawBoard();
-    }
+function initializeBoard() {
+  createTrackPath();
 
-    // Draw the board and pieces
-    function drawBoard() {
-      ctx.clearRect(0, 0, 500, 500);
-      ctx.strokeStyle = "#000";
-      ctx.lineWidth = 3;
+  playerPieces = [{ pathIndex: 0 }, { pathIndex: 1 }, { pathIndex: 2 }];
+  aiPieces = [{ pathIndex: 0 }, { pathIndex: 1 }, { pathIndex: 2 }];
 
-      // Draw grid lines
-      for (let i = 1; i < 5; i++) {
-        ctx.beginPath();
-        ctx.moveTo(i * 100, 0);
-        ctx.lineTo(i * 100, 500);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(0, i * 100);
-        ctx.lineTo(500, i * 100);
-        ctx.stroke();
-      }
+  currentPlayer = 'player';
+  gameActive = true;
+  selectedPieceIndex = null;
+  drawBoard();
 
-      // Draw player pieces
-      playerPieces.forEach(piece => {
-        ctx.fillStyle = 'blue';
-        ctx.beginPath();
-        ctx.arc(piece.x * 100 + 50, piece.y * 100 + 50, 40, 0, Math.PI * 2);
-        ctx.fill();
-      });
+  if (currentPlayer === 'ai') aiMove(); // If AI starts first later
+}
 
-      // Draw AI pieces
-      aiPieces.forEach(piece => {
-        ctx.fillStyle = 'red';
-        ctx.beginPath();
-        ctx.arc(piece.x * 100 + 50, piece.y * 100 + 50, 40, 0, Math.PI * 2);
-        ctx.fill();
-      });
-    }
+function drawBoard() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 3;
+
+  const spacingY = canvas.height / (lineCount + 1);
+  const spacingX = canvas.width / (spacesPerLine + 1);
+
+  // Draw 5 lines
+  for (let i = 1; i <= lineCount; i++) {
+    ctx.beginPath();
+    ctx.moveTo(spacingX, spacingY * i);
+    ctx.lineTo(spacingX * spacesPerLine, spacingY * i);
+    ctx.stroke();
+  }
+  
+
+  // Draw player pieces
+  playerPieces.forEach(piece => {
+    const spot = trackPath[piece.pathIndex];
+    const x = spacingX * (spot.pos + 1);
+    const y = spacingY * (spot.line + 1);
+    ctx.fillStyle = 'blue';
+    ctx.beginPath();
+    ctx.arc(x, y, 20, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Show dice result inside canvas
+ctx.fillStyle = 'black';
+ctx.font = 'bold 24px sans-serif';
+ctx.fillText(`Dice: ${document.getElementById('diceResult').textContent}`, 10, 30);
+  // Draw AI pieces
+aiPieces.forEach(piece => {
+  const spot = trackPath[piece.pathIndex];
+  const x = spacingX * (spot.pos + 1);
+  const y = spacingY * (spot.line + 1);
+  ctx.fillStyle = 'red';
+  ctx.beginPath();
+  ctx.arc(x, y, 20, 0, Math.PI * 2);
+  ctx.fill();
+});
+
 
     // Roll the die (1-6)
     function rollDie() {
@@ -180,14 +226,93 @@
       alert(`You rolled a ${dieResult}. Move your piece!`);
       // Implement movement logic here based on your rules
     }
+    setTimeout(() => {
+    currentPlayer = 'ai';
+    aiMove();
+ }, 600);
 
     // Handle AI move (based on difficulty)
     function aiMove() {
-      const dieResult = rollDie();
-      console.log(`AI rolled a ${dieResult}.`);
-      // Implement AI movement logic here based on difficulty
+  if (!gameActive) return;
+
+  const dieResult = rollDie();
+  console.log(`AI rolled a ${dieResult}`);
+
+  let moved = false;
+
+  if (difficulty === 'easy') {
+    // EASY → Move the first available piece
+    for (let i = 0; i < aiPieces.length; i++) {
+      if (canMove(aiPieces[i], dieResult, aiPieces, playerPieces)) {
+        aiPieces[i].pathIndex += dieResult;
+        moved = true;
+        break;
+      }
     }
 
+  } else if (difficulty === 'medium') {
+    // MEDIUM → Try to capture player if possible
+    for (let i = 0; i < aiPieces.length; i++) {
+      let newIndex = aiPieces[i].pathIndex + dieResult;
+      if (newIndex < trackPath.length && playerPieces.some(p => p.pathIndex === newIndex)) {
+        aiPieces[i].pathIndex = newIndex;
+        moved = true;
+        break;
+      }
+    }
+    if (!moved) {
+      for (let i = 0; i < aiPieces.length; i++) {
+        if (canMove(aiPieces[i], dieResult, aiPieces, playerPieces)) {
+          aiPieces[i].pathIndex += dieResult;
+          moved = true;
+          break;
+        }
+      }
+    }
+
+  } else if (difficulty === 'hard') {
+    // HARD → Capture preferred, else avoid stacking behind own pieces
+    for (let i = 0; i < aiPieces.length; i++) {
+      let newIndex = aiPieces[i].pathIndex + dieResult;
+      if (newIndex < trackPath.length && playerPieces.some(p => p.pathIndex === newIndex)) {
+        aiPieces[i].pathIndex = newIndex;
+        moved = true;
+        break;
+      }
+    }
+
+    if (!moved) {
+      for (let i = 0; i < aiPieces.length; i++) {
+        let newIndex = aiPieces[i].pathIndex + dieResult;
+        if (newIndex < trackPath.length && !aiPieces.some(p => p.pathIndex === newIndex)) {
+          aiPieces[i].pathIndex = newIndex;
+          moved = true;
+          break;
+        }
+      }
+    }
+
+    if (!moved) {
+      // If no other move, just move something
+      for (let i = 0; i < aiPieces.length; i++) {
+        if (canMove(aiPieces[i], dieResult, aiPieces, playerPieces)) {
+          aiPieces[i].pathIndex += dieResult;
+          break;
+        }
+      }
+    }
+  }
+
+  drawBoard();
+  currentPlayer = 'player';
+}
+function canMove(piece, roll, ownPieces, enemyPieces) {
+  const targetIndex = piece.pathIndex + roll;
+  if (targetIndex >= trackPath.length) return false;
+  if (ownPieces.some(p => p.pathIndex === targetIndex)) return false;
+  return true;
+}
+    
     // Event Listeners
     document.getElementById('newGameBtn').onclick = () => showScreen('difficultyScreen');
     document.getElementById('instructionsBtn').onclick = () => showScreen('instructionsScreen');
