@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Another Product Invented – Penti Grammai</title>
+  <title>Another Product Invented – Pente Grammai</title>
   <style>
     body {
       margin: 0;
@@ -20,7 +20,7 @@
     }
     #gameContainer {
       position: relative;
-      width: 360px;
+      width: 500px;
       max-width: 100%;
       margin-bottom: 10px;
     }
@@ -62,182 +62,150 @@
 </head>
 <body>
 
-  <h1>Another Product Invented<br>Penti Grammai</h1>
+  <h1>Another Product Invented<br>Pente Grammai</h1>
 
   <div id="gameContainer">
-    <canvas id="gameCanvas" width="360" height="360"></canvas>
+    <canvas id="gameCanvas" width="500" height="500"></canvas>
 
+    <!-- Menu Screen -->
     <div id="menuScreen" class="overlayScreen" style="display:flex;">
-      <button onclick="startGame()">New Game</button>
-      <button onclick="showInstructions()">Instructions</button>
+      <button id="newGameBtn">New Game</button>
+      <button id="instructionsBtn">Instructions</button>
     </div>
 
+    <!-- Difficulty Screen -->
+    <div id="difficultyScreen" class="overlayScreen">
+      <p>Select Difficulty:</p>
+      <button id="easyBtn">Easy</button>
+      <button id="mediumBtn">Medium</button>
+      <button id="hardBtn">Hard</button>
+    </div>
+
+    <!-- Instructions Screen -->
     <div id="instructionsScreen" class="overlayScreen">
-      <h2>How to Play Penti Grammai</h2>
-      <p>🔸 All your pieces start on the third line (middle of the board), on your side.</p>
-      <p>🔸 Move your pieces anti-clockwise around the board based on dice rolls.</p>
-      <p>🔸 You cannot move to a space if it's already occupied.</p>
-      <p>🔸 If you have no valid moves, your turn is skipped.</p>
-      <p>🔸 You can only enter home (center) if all your pieces have left your starting line.</p>
-      <p>🔸 You cannot enter home if the entry point is blocked.</p>
-      <p>🔸 First to get all pieces home wins!</p>
-      <button onclick="showScreen('menuScreen')">Back to Menu</button>
+      <h2>How to Play Pente Grammai</h2>
+      <p>1. All pieces start on the middle line, with you on one side and the AI on the other.</p>
+      <p>2. Roll the die to move your pieces anti-clockwise.</p>
+      <p>3. Move your pieces to the opposite third line to win.</p>
+      <p>4. You cannot land on a space occupied by another piece.</p>
+      <p>5. If your dice roll would land you on a blocked space, you must choose another piece to move (if possible).</p>
+      <p>6. Pieces cannot enter home if any of your pieces are still in the starting third line.</p>
+      <p><strong>Press [M] to return to the Main Menu.</strong></p>
     </div>
 
+    <!-- Game Over Screen -->
     <div id="gameOverScreen" class="overlayScreen">
       <h2 id="resultText"></h2>
-      <button onclick="startGame()">New Game</button>
-      <button onclick="showScreen('menuScreen')">Menu</button>
+      <button id="gameOverNewGame">New Game</button>
+      <p><strong>Press [M] to return to the Main Menu.</strong></p>
     </div>
   </div>
 
   <img id="logo" src="logo.png" alt="Logo">
 
   <script>
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    const track = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
-    let playerPieces = [0,1,2,3,4]; // starting indexes on one side of central line
-    let aiPieces = [8,9,10,11,12]; // AI on the other side
-    let homePlayer = [], homeAI = [];
-    let currentPlayer = 'player';
-    let diceRoll = 0;
-    let gameActive = true;
+    // Game Logic
+    let canvas = document.getElementById('gameCanvas'),
+        ctx = canvas.getContext('2d'),
+        board = [], // 5x5 grid
+        playerPieces = [], // Player's pieces
+        aiPieces = [], // AI's pieces
+        currentPlayer = 'player', // Player starts first
+        gameActive = false,
+        difficulty = 'easy';
 
-    function showScreen(id){
-      document.querySelectorAll('.overlayScreen').forEach(s=>s.style.display='none');
-      if(id) document.getElementById(id).style.display='flex';
-    }
-
-    function showInstructions(){
-      showScreen('instructionsScreen');
-    }
-
-    function startGame(){
-      playerPieces = [0,1,2,3,4];
-      aiPieces = [8,9,10,11,12];
-      homePlayer = [];
-      homeAI = [];
+    // Initialize the board
+    function initializeBoard() {
+      board = Array.from({ length: 5 }, () => Array(5).fill(null));
+      playerPieces = [{ x: 2, y: 0 }, { x: 2, y: 1 }, { x: 2, y: 2 }]; // Starting positions
+      aiPieces = [{ x: 2, y: 4 }, { x: 2, y: 3 }, { x: 2, y: 2 }]; // Starting positions
       currentPlayer = 'player';
       gameActive = true;
-      showScreen('');
       drawBoard();
-      setTimeout(playerTurn, 500);
     }
 
-    function drawBoard(){
-      ctx.clearRect(0,0,360,360);
+    // Draw the board and pieces
+    function drawBoard() {
+      ctx.clearRect(0, 0, 500, 500);
       ctx.strokeStyle = "#000";
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 3;
 
-      for(let i=0; i<5; i++){
+      // Draw grid lines
+      for (let i = 1; i < 5; i++) {
         ctx.beginPath();
-        ctx.moveTo(60, 60 + i*60);
-        ctx.lineTo(300, 60 + i*60);
+        ctx.moveTo(i * 100, 0);
+        ctx.lineTo(i * 100, 500);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, i * 100);
+        ctx.lineTo(500, i * 100);
         ctx.stroke();
       }
 
-      for(let i=0; i<playerPieces.length; i++){
-        drawPiece(track[playerPieces[i]], 'blue', i);
-      }
-      for(let i=0; i<aiPieces.length; i++){
-        drawPiece(track[aiPieces[i]], 'red', i);
-      }
-      for(let i=0; i<homePlayer.length; i++){
-        drawHome('blue', i);
-      }
-      for(let i=0; i<homeAI.length; i++){
-        drawHome('red', i);
-      }
+      // Draw player pieces
+      playerPieces.forEach(piece => {
+        ctx.fillStyle = 'blue';
+        ctx.beginPath();
+        ctx.arc(piece.x * 100 + 50, piece.y * 100 + 50, 40, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Draw AI pieces
+      aiPieces.forEach(piece => {
+        ctx.fillStyle = 'red';
+        ctx.beginPath();
+        ctx.arc(piece.x * 100 + 50, piece.y * 100 + 50, 40, 0, Math.PI * 2);
+        ctx.fill();
+      });
     }
 
-    function drawPiece(pos, color, index){
-      let x = 90 + (index%2)*180;
-      let y = 60 + (index%5)*60;
-      ctx.beginPath();
-      ctx.arc(x, y, 20, 0, 2 * Math.PI);
-      ctx.fillStyle = color;
-      ctx.fill();
+    // Roll the die (1-6)
+    function rollDie() {
+      return Math.floor(Math.random() * 6) + 1;
     }
 
-    function drawHome(color, index){
-      let x = 180;
-      let y = 60 + index*30;
-      ctx.beginPath();
-      ctx.arc(x, y, 10, 0, 2 * Math.PI);
-      ctx.fillStyle = color;
-      ctx.fill();
+    // Handle player move
+    function playerMove() {
+      const dieResult = rollDie();
+      alert(`You rolled a ${dieResult}. Move your piece!`);
+      // Implement movement logic here based on your rules
     }
 
-    function playerTurn(){
-      if (!gameActive) return;
-      diceRoll = Math.floor(Math.random()*6)+1;
-      let movable = playerPieces.filter(p => !isBlocked(p, diceRoll, playerPieces, aiPieces));
-      if (movable.length === 0) {
-        currentPlayer = 'ai';
-        setTimeout(aiTurn, 1000);
-        return;
-      }
-      let choice = movable.length === 1 ? movable[0] : movable[0]; // auto for now
-      movePiece(choice, diceRoll, 'player');
+    // Handle AI move
+    function aiMove() {
+      const dieResult = rollDie();
+      console.log(`AI rolled a ${dieResult}.`);
+      // Implement AI movement logic here based on difficulty
     }
 
-    function aiTurn(){
-      if (!gameActive) return;
-      diceRoll = Math.floor(Math.random()*6)+1;
-      let movable = aiPieces.filter(p => !isBlocked(p, diceRoll, aiPieces, playerPieces));
-      if (movable.length === 0) {
-        currentPlayer = 'player';
-        setTimeout(playerTurn, 1000);
-        return;
-      }
-      let choice = movable[Math.floor(Math.random()*movable.length)];
-      movePiece(choice, diceRoll, 'ai');
+    // Check for win condition
+    function checkWin() {
+      // Implement win condition logic here
     }
 
-    function isBlocked(pos, roll, ownPieces, opponent){
-      let newPos = pos + roll;
-      return ownPieces.includes(newPos) || opponent.includes(newPos) || newPos >= track.length;
+    // Event Listeners
+    document.getElementById('newGameBtn').onclick = () => {
+      showScreen('difficultyScreen');
+      initializeBoard();
+    };
+    document.getElementById('instructionsBtn').onclick = () => showScreen('instructionsScreen');
+    document.getElementById('easyBtn').onclick = () => { difficulty = 'easy'; initializeBoard(); };
+    document.getElementById('mediumBtn').onclick = () => { difficulty = 'medium'; initializeBoard(); };
+    document.getElementById('hardBtn').onclick = () => { difficulty = 'hard'; initializeBoard(); };
+    document.getElementById('gameOverNewGame').onclick = () => showScreen('menuScreen');
+
+    // Show/hide screens
+    function showScreen(id) {
+      document.querySelectorAll('.overlayScreen').forEach(s => s.style.display = 'none');
+      if (id) document.getElementById(id).style.display = 'flex';
     }
 
-    function movePiece(pos, roll, who){
-      let newPos = pos + roll;
-      if (newPos >= track.length) return;
+    // Keyboard shortcut to return to menu
+    document.addEventListener('keydown', e => {
+      if (e.key.toLowerCase() === 'm') showScreen('menuScreen');
+    });
 
-      let own = who === 'player' ? playerPieces : aiPieces;
-      let opponent = who === 'player' ? aiPieces : playerPieces;
-      let home = who === 'player' ? homePlayer : homeAI;
-
-      if (opponent.includes(newPos)) {
-        opponent.splice(opponent.indexOf(newPos),1);
-      }
-
-      own[own.indexOf(pos)] = newPos;
-
-      if (newPos === track.length - 1 && own.every(p => p !== 0 && p !== 1 && p !== 2 && p !== 3 && p !== 4)) {
-        home.push(newPos);
-        own.splice(own.indexOf(newPos),1);
-      }
-
-      drawBoard();
-      checkWin();
-      currentPlayer = who === 'player' ? 'ai' : 'player';
-      setTimeout(currentPlayer === 'player' ? playerTurn : aiTurn, 1000);
-    }
-
-    function checkWin(){
-      if (homePlayer.length === 5) {
-        gameActive = false;
-        document.getElementById('resultText').textContent = "You Win!";
-        showScreen('gameOverScreen');
-      }
-      if (homeAI.length === 5) {
-        gameActive = false;
-        document.getElementById('resultText').textContent = "You Lose!";
-        showScreen('gameOverScreen');
-      }
-    }
-
+    // Start with the menu screen
     showScreen('menuScreen');
   </script>
 </body>
