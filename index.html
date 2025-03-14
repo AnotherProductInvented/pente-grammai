@@ -5,13 +5,10 @@
   <title>Another Product Invented – Pente Grammai</title>
   <style>
     body {
-      margin: 0;
-      padding: 0;
+      margin: 0; padding: 0;
       background: #fff;
       font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      display: flex; flex-direction: column; align-items: center;
     }
     h1 {
       margin: 1rem 0 0.5rem;
@@ -20,258 +17,452 @@
     }
     #gameContainer {
       position: relative;
-      width: 500px;
-      max-width: 100%;
+      width: 500px; height: 500px;
       margin-bottom: 10px;
-      border: 2px solid #333;
-      background: #fafafa;
+      border: 2px solid #555;
+      box-sizing: border-box;
     }
     canvas {
       display: block;
-      width: 100%;
-      height: auto;
+      width: 100%; height: 100%;
       background: #eee;
-      touch-action: none;
     }
-    #controls {
-      margin: 10px;
-      font-size: 16px;
+    /* Overlays */
+    .overlayScreen {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255,255,255,0.95);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
+      z-index: 10;
     }
-    #diceResult {
-      font-weight: bold;
-      margin-left: 10px;
+    #menuScreen, #instructionsScreen, #difficultyScreen, #gameOverScreen {
+      /* Each hidden by default; only one shows at a time */
+    }
+    button {
       font-size: 18px;
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
     }
+    /* Difficulty + Side container side-by-side */
+    #difficultySideContainer {
+      display: flex; gap: 20px;
+      flex-direction: row;
+      margin-top: 10px;
+    }
+    #difficultyContainer, #sideContainer {
+      display: flex; flex-direction: column; align-items: center;
+    }
+    #diceArea {
+      display: flex;
+      width: 500px;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    #diceRollBtn {
+      font-size: 18px;
+      margin-left: 10px;
+    }
+    #pastMoves {
+      width: 180px;
+      border: 1px solid #444;
+      background: #fafafa;
+      padding: 5px;
+      overflow-y: auto;
+      height: 120px; /* so we can see a small scroll area if many moves */
+    }
+    #pastMoves ul { margin: 0; padding: 0; list-style: none; }
+    #pastMoves li { margin: 2px 0; }
   </style>
 </head>
 <body>
 
 <h1>Another Product Invented<br>Pente Grammai</h1>
 
+<!-- Container for the 5-line board -->
 <div id="gameContainer">
   <canvas id="gameCanvas" width="500" height="500"></canvas>
+
+  <!-- MENU SCREEN -->
+  <div id="menuScreen" class="overlayScreen" style="display:flex;">
+    <button id="newGameBtn">New Game</button>
+    <button id="instructionsBtn">Instructions</button>
+  </div>
+
+  <!-- INSTRUCTIONS SCREEN -->
+  <div id="instructionsScreen" class="overlayScreen">
+    <h2>Instructions</h2>
+    <p>1) You have 5 pieces, the AI has 5 pieces, all on the center line initially.</p>
+    <p>2) Roll dice. Click your piece to move it. If it lands on a rosette, you get another turn.</p>
+    <p>3) The goal is to move your pieces from the center line to the final line, following the Pente Grammai path.</p>
+    <p>Press [M] to return to the main menu.</p>
+  </div>
+
+  <!-- DIFFICULTY & SIDE SELECTION SCREEN -->
+  <div id="difficultyScreen" class="overlayScreen">
+    <h2>New Game</h2>
+    <div id="difficultySideContainer">
+      <!-- Difficulty column -->
+      <div id="difficultyContainer">
+        <p><strong>Difficulty</strong></p>
+        <button id="easyBtn">Easy</button>
+        <button id="mediumBtn">Medium</button>
+        <button id="hardBtn">Hard</button>
+      </div>
+      <!-- Side column -->
+      <div id="sideContainer">
+        <p><strong>Side</strong></p>
+        <button id="leftSideBtn">Left</button>
+        <button id="rightSideBtn">Right</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME OVER SCREEN -->
+  <div id="gameOverScreen" class="overlayScreen">
+    <h2 id="gameOverText"></h2>
+    <button id="gameOverNewGameBtn">New Game</button>
+    <p>Press [M] to return to the Main Menu.</p>
+  </div>
 </div>
 
-<div id="controls">
-  <button id="rollDiceBtn">Roll Dice</button>
-  <span>Dice: <span id="diceResult">0</span></span>
+<!-- Dice + Past Moves area, on the same row (above or below? We put it above) -->
+<div id="diceArea">
+  <div>
+    Dice: <span id="diceResult">0</span>
+    <button id="diceRollBtn">Roll Dice</button>
+  </div>
+  <div id="pastMoves">
+    <ul id="movesList"></ul>
+  </div>
 </div>
 
 <script>
-/*
-  We have 5 horizontal lines (0..4). We'll place 10 total pieces on line #2 (the middle line):
-    - 5 belong to the player (blue),
-    - 5 belong to the AI (red).
-
-  We'll represent each piece as { line: 2, col: someColumn, owner: 'player'/'ai' }.
-  We can move them left or right (for example) by the dice roll. This is a minimal approach.
-*/
-
+/*****************************************************************
+ * 1) Basic Board Setup
+ *****************************************************************/
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
-const rollDiceBtn = document.getElementById("rollDiceBtn");
-const diceResultSpan = document.getElementById("diceResult");
+const W = canvas.width;
+const H = canvas.height;
 
-const width = canvas.width;
-const height = canvas.height;
+// We'll define 5 horizontal lines:
+const lineCount = 5; // 0..4
+// We'll define we have 7 spaces per line (like your Pente approach).
+const spacesPerLine = 7;
 
-const NUM_LINES = 5;
-const COLS_PER_LINE = 11;  // Enough horizontal "spots" to move pieces
-const LINE_SPACING = height / (NUM_LINES + 1);
-const COL_SPACING = width / (COLS_PER_LINE + 1);
-
-let pieces = []; // Will store objects like { line, col, owner }
-let currentTurn = 'player';
+// We'll store piece data: each piece has { line, space, color, isAI? }
+let pieces = []; // total 10 pieces (5 human, 5 AI)
+let difficulty = null;
+let humanSide = null; // 'left' or 'right'
+let currentTurn = 'human'; // or 'ai'
 let diceValue = 0;
-let gameActive = true;
+let diceRolled = false;
+let gameState = "menu";
+let movesHistory = [];
 
-// Initialize 10 total pieces in the middle line (#2).
-// We'll place the player's 5 pieces on columns 0..4 and the AI's 5 pieces on columns 6..10
-function initGame() {
-  pieces = [];
-  // Player pieces in columns 0..4
-  for (let c = 0; c < 5; c++) {
-    pieces.push({ line: 2, col: c, owner: 'player' });
-  }
-  // AI pieces in columns 6..10
-  for (let c = 6; c < 11; c++) {
-    pieces.push({ line: 2, col: c, owner: 'ai' });
-  }
-  currentTurn = 'player'; // Player starts
-  diceValue = 0;
-  gameActive = true;
-  drawBoard();
+/*****************************************************************
+ * 2) Overlays
+ *****************************************************************/
+const menuScreen = document.getElementById("menuScreen");
+const instructionsScreen = document.getElementById("instructionsScreen");
+const difficultyScreen = document.getElementById("difficultyScreen");
+const gameOverScreen = document.getElementById("gameOverScreen");
+const gameOverText = document.getElementById("gameOverText");
+const diceResultSpan = document.getElementById("diceResult");
+const movesList = document.getElementById("movesList");
+
+/*****************************************************************
+ * 3) Show/hide overlay screens
+ *****************************************************************/
+function showOverlay(screenId) {
+  [menuScreen, instructionsScreen, difficultyScreen, gameOverScreen].forEach(s => s.style.display = "none");
+  if (screenId) screenId.style.display = "flex";
 }
 
-function drawBoard() {
-  ctx.clearRect(0, 0, width, height);
-  ctx.strokeStyle = '#000';
-  ctx.lineWidth = 2;
+/*****************************************************************
+ * 4) Start a new game
+ *****************************************************************/
+function startGame() {
+  // Clear old pieces
+  pieces = [];
+  movesHistory = [];
+  movesList.innerHTML = "";
+  diceValue = 0;
+  diceResultSpan.textContent = "0";
+  diceRolled = false;
+  currentTurn = 'human'; // Start with the human
 
-  // Draw the 5 horizontal lines
-  for (let i = 1; i <= NUM_LINES; i++) {
-    let y = LINE_SPACING * i;
-    ctx.beginPath();
-    ctx.moveTo(COL_SPACING, y);
-    ctx.lineTo(COL_SPACING * COLS_PER_LINE, y);
-    ctx.stroke();
+  // Place 5 human pieces, 5 AI pieces on center line (line = 2).
+  // If side is left, we'll place them at spaces 0..4. If side is right, we'll place them at spaces 2..6. 
+  // (Adjust as you see fit.)
+  if (humanSide === 'left') {
+    // Human pieces on line=2, spaces= 0..4
+    for (let i = 0; i < 5; i++) {
+      pieces.push({ line: 2, space: i, color: 'blue', isAI: false });
+    }
+    // AI pieces on line=2, spaces= 6..2 (in reverse or something)
+    for (let i = 0; i < 5; i++) {
+      pieces.push({ line: 2, space: spacesPerLine - 1 - i, color: 'red', isAI: true });
+    }
+  } else {
+    // Human is right
+    // Human pieces on line=2, spaces= 2..6
+    for (let i = 0; i < 5; i++) {
+      pieces.push({ line: 2, space: spacesPerLine - 1 - i, color: 'blue', isAI: false });
+    }
+    // AI on left
+    for (let i = 0; i < 5; i++) {
+      pieces.push({ line: 2, space: i, color: 'red', isAI: true });
+    }
   }
 
-  // Draw pieces
-  pieces.forEach(p => {
-    drawPiece(p);
+  gameState = "playing";
+  showOverlay(null);
+  redrawBoard();
+}
+
+/*****************************************************************
+ * 5) Drawing the lines + pieces
+ *****************************************************************/
+function redrawBoard() {
+  ctx.clearRect(0, 0, W, H);
+  drawLines();
+  drawPieces();
+}
+function drawLines() {
+  // We'll space them evenly in the vertical direction
+  const lineSpacing = H / (lineCount + 1);
+  for (let i = 1; i <= lineCount; i++) {
+    let y = i * lineSpacing;
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+  }
+}
+function drawPieces() {
+  // Each line is a horizontal line from x=0..W
+  // We have spacesPerLine = 7 spaces. We'll define them from x=some intervals
+  const lineSpacing = H / (lineCount + 1);
+  const spaceSpacing = W / (spacesPerLine + 1);
+
+  pieces.forEach(piece => {
+    let y = (piece.line + 1) * lineSpacing;
+    let x = (piece.space + 1) * spaceSpacing;
+    ctx.fillStyle = piece.color;
+    ctx.beginPath();
+    ctx.arc(x, y, 15, 0, Math.PI * 2);
+    ctx.fill();
   });
 }
 
-function drawPiece(piece) {
-  // Convert line+col into x,y
-  let y = LINE_SPACING * (piece.line + 1);
-  let x = COL_SPACING * (piece.col + 1);
-
-  ctx.beginPath();
-  ctx.arc(x, y, 12, 0, Math.PI * 2);
-  ctx.closePath();
-  if (piece.owner === 'player') {
-    ctx.fillStyle = 'blue';
-  } else {
-    ctx.fillStyle = 'red';
-  }
-  ctx.fill();
-  ctx.strokeStyle = '#000';
-  ctx.stroke();
-}
-
-// Basic dice roll: 1..6
-function rollDice() {
-  if (!gameActive) return;
-  if (diceValue !== 0) {
-    // Already rolled this turn
+/*****************************************************************
+ * 6) Board click => attempt to move
+ *****************************************************************/
+canvas.addEventListener('mousedown', e => {
+  if (gameState !== "playing") return;
+  if (!diceRolled) {
+    console.warn("Must roll dice first!");
     return;
   }
-  let val = Math.floor(Math.random() * 6) + 1;
-  diceValue = val;
-  diceResultSpan.textContent = val.toString();
-  // If it's AI's turn, call AI logic
   if (currentTurn === 'ai') {
-    setTimeout(aiMove, 800);
+    console.warn("AI's turn. Wait!");
+    return;
   }
+  // Convert mouse coords to line/space
+  const rect = canvas.getBoundingClientRect();
+  let mx = e.clientX - rect.left, my = e.clientY - rect.top;
+
+  let lineSpacing = H / (lineCount + 1);
+  let spaceSpacing = W / (spacesPerLine + 1);
+
+  // Figure out which line user clicked
+  // line = floor((my / lineSpacing) - 0.5)
+  // space = floor((mx / spaceSpacing) - 0.5)
+  let line = Math.floor(my / lineSpacing) - 0;
+  let space = Math.floor(mx / spaceSpacing) - 0;
+
+  if (line < 0 || line >= lineCount) return;
+  if (space < 0 || space >= spacesPerLine) return;
+
+  // Find piece with color=blue (isAI=false) at (line,space)
+  let pieceIndex = pieces.findIndex(p => !p.isAI && p.line === line && p.space === space);
+  if (pieceIndex === -1) {
+    console.warn("No piece of yours at that location.");
+    return;
+  }
+  // Attempt to move that piece diceValue spaces forward or backward, etc. 
+  // For now, let's say we move it 'diceValue' spaces to the left or right 
+  // depending on which side is human. This is up to your rules.
+  let newSpace = space;
+  if (humanSide === 'left') {
+    // Move to the right by diceValue
+    newSpace = space + diceValue;
+  } else {
+    // Move to the left by diceValue
+    newSpace = space - diceValue;
+  }
+  if (newSpace < 0 || newSpace >= spacesPerLine) {
+    console.warn("Move out of bounds. Try another piece.");
+    return;
+  }
+  // Check collision with any piece
+  if (pieces.some(p => p.line === line && p.space === newSpace)) {
+    console.warn("Space is occupied. Try another piece or roll again next turn.");
+    return;
+  }
+  // Move piece
+  pieces[pieceIndex].space = newSpace;
+
+  // Log move
+  addMoveToHistory(`Human: line=${line}, from space=${space} to space=${newSpace} (dice=${diceValue})`);
+
+  diceRolled = false;
+  diceValue = 0;
+  document.getElementById('diceResult').textContent = "0";
+
+  // If no rosette logic or partial rosette logic => end turn
+  currentTurn = 'ai';
+  setTimeout(aiTurn, 1200);
+  redrawBoard();
+});
+
+/*****************************************************************
+ * 7) AI Turn
+ *****************************************************************/
+function aiTurn() {
+  if (!pieces.some(p => p.isAI)) return; // no AI pieces => no AI turn
+  if (difficulty === "none") return; // user asked for no AI?
+
+  // 1) Roll dice
+  diceValue = Math.floor(Math.random() * 6) + 1;
+  document.getElementById('diceResult').textContent = diceValue;
+
+  // 2) Attempt to find a piece to move
+  let aiPieces = pieces.filter(p => p.isAI);
+  let success = false;
+
+  // If side is left => AI is on the right => they move left by diceValue
+  // If side is right => AI is on the left => they move right by diceValue
+  // (or adapt to your logic)
+  aiPieces.some(piece => {
+    let oldSpace = piece.space;
+    let newSpace = (humanSide === 'left') 
+        ? oldSpace - diceValue
+        : oldSpace + diceValue;
+    if (newSpace >= 0 && newSpace < spacesPerLine) {
+      // Check collision
+      if (!pieces.some(pp => pp.line === piece.line && pp.space === newSpace)) {
+        // Move
+        piece.space = newSpace;
+        addMoveToHistory(`AI: line=${piece.line}, from space=${oldSpace} to space=${newSpace} (dice=${diceValue})`);
+        success = true;
+        return true; // break
+      }
+    }
+  });
+
+  // If AI found no move, we do nothing => pass turn
+  diceValue = 0;
+  document.getElementById('diceResult').textContent = "0";
+  diceRolled = false;
+  currentTurn = 'human';
+  redrawBoard();
 }
 
-// Player's turn: they must click on a piece to move
-// We'll handle that in the canvas click
-canvas.addEventListener('click', e => {
-  if (!gameActive) return;
-  if (currentTurn !== 'player') return; // Only if it's player's turn
-  if (diceValue === 0) return;         // Must roll dice first
+/*****************************************************************
+ * 8) Rolling the dice (Human)
+ *****************************************************************/
+document.getElementById('diceRollBtn').addEventListener('click', () => {
+  if (gameState !== "playing") return;
+  if (currentTurn !== 'human') {
+    console.warn("Not your turn, or AI turn. Wait!");
+    return;
+  }
+  if (diceRolled) {
+    console.warn("Already rolled dice this turn!");
+    return;
+  }
+  diceValue = Math.floor(Math.random() * 6) + 1;
+  diceRolled = true;
+  document.getElementById('diceResult').textContent = diceValue;
+});
 
-  // Determine which piece was clicked
-  const rect = canvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
+/*****************************************************************
+ * 9) Move History
+ *****************************************************************/
+function addMoveToHistory(msg) {
+  movesHistory.push(msg);
+  let li = document.createElement('li');
+  li.textContent = msg;
+  movesList.appendChild(li);
+  // Auto-scroll to bottom if many moves
+  movesList.scrollTop = movesList.scrollHeight;
+}
 
-  // Find a piece belonging to 'player' that was clicked
-  for (let i = 0; i < pieces.length; i++) {
-    let p = pieces[i];
-    if (p.owner !== 'player') continue;
-    // Convert p.line, p.col to center
-    let cy = LINE_SPACING * (p.line + 1);
-    let cx = COL_SPACING * (p.col + 1);
+/*****************************************************************
+ * 10) Overlays & Buttons
+ *****************************************************************/
+document.getElementById('newGameBtn').addEventListener('click', () => {
+  showOverlay(difficultyScreen);
+});
+document.getElementById('instructionsBtn').addEventListener('click', () => {
+  showOverlay(instructionsScreen);
+});
+// Difficulty
+document.getElementById('easyBtn').addEventListener('click', () => {
+  difficulty = 'easy';
+});
+document.getElementById('mediumBtn').addEventListener('click', () => {
+  difficulty = 'medium';
+});
+document.getElementById('hardBtn').addEventListener('click', () => {
+  difficulty = 'hard';
+});
+// Side
+document.getElementById('leftSideBtn').addEventListener('click', () => {
+  humanSide = 'left';
+  startGame();
+});
+document.getElementById('rightSideBtn').addEventListener('click', () => {
+  humanSide = 'right';
+  startGame();
+});
+// Game Over
+document.getElementById('gameOverNewGameBtn').addEventListener('click', () => {
+  showOverlay(menuScreen);
+});
 
-    let dx = mx - cx;
-    let dy = my - cy;
-    if (dx * dx + dy * dy <= 144) { // radius=12 => 12^2=144
-      // We clicked this piece
-      // Move it "to the right" by diceValue, if possible
-      let newCol = p.col + diceValue;
-      if (newCol >= COLS_PER_LINE) {
-        // Can't move off board => do nothing or handle "winning"
-        // For now just skip
-        console.log("Can't move off board.");
-        return;
-      }
-      // Check if new spot is occupied
-      if (pieces.some(pp => pp.line === p.line && pp.col === newCol)) {
-        console.log("That spot is occupied. Can't move.");
-        return;
-      }
-      // Move piece
-      p.col = newCol;
-      // Check if game is won? (Your rules)
-      // We'll skip that for now
-      diceValue = 0;
-      diceResultSpan.textContent = '0';
-      drawBoard();
-      // Switch turn
-      switchTurn();
-      return;
-    }
+/*****************************************************************
+ * 11) Keyboard shortcuts
+ *****************************************************************/
+document.addEventListener('keydown', e => {
+  if (e.key.toLowerCase() === 'm') {
+    showOverlay(menuScreen);
   }
 });
 
-function switchTurn() {
-  if (!gameActive) return;
-  // If we had an extra turn, keep currentTurn
-  if (extraTurn) {
-    extraTurn = false;
-    console.log("Extra turn triggered, staying with " + currentTurn);
-    return;
+/*****************************************************************
+ * 12) Start with menu
+ *****************************************************************/
+showOverlay(menuScreen);
+redrawBoard(); // draw empty lines at first
+requestAnimationFrame(function loop() {
+  if (gameState === 'playing') {
+    // maybe check for win conditions, etc.
   }
-  currentTurn = (currentTurn === 'player') ? 'ai' : 'player';
-  if (currentTurn === 'ai') {
-    setTimeout(() => {
-      rollDice(); // AI auto-rolls
-    }, 500);
-  }
-}
-
-// AI logic
-function aiMove() {
-  if (!gameActive) return;
-  // AI picks a piece to move
-  let moves = getAIMoves();
-  if (moves.length === 0) {
-    // No moves => pass turn
-    console.log("AI can't move => pass turn");
-    diceValue = 0;
-    diceResultSpan.textContent = '0';
-    switchTurn();
-    return;
-  }
-  // Just pick first move for example
-  let move = moves[0];
-  move.piece.col = move.newCol;
-  diceValue = 0;
-  diceResultSpan.textContent = '0';
-  drawBoard();
-  switchTurn();
-}
-
-function getAIMoves() {
-  // Return all possible moves for AI
-  let moves = [];
-  pieces.forEach(p => {
-    if (p.owner !== 'ai') return;
-    let newCol = p.col - diceValue; // AI moves left, for example
-    if (newCol < 0) return;         // can't move off board
-    // Check if occupied
-    if (pieces.some(pp => pp.line === p.line && pp.col === newCol)) return;
-    moves.push({ piece: p, newCol });
-  });
-  return moves;
-}
-
-// Minimal "can we move" check for the AI
-function canMove() {
-  // ...
-}
-
-// Start
-initGame();
-
-rollDiceBtn.addEventListener('click', () => {
-  if (currentTurn === 'player') {
-    rollDice();
-  }
+  requestAnimationFrame(loop);
 });
 </script>
 </body>
