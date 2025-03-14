@@ -119,9 +119,11 @@
     </div>
     <div id="instructionsScreen" class="overlayScreen">
       <h2>Instructions</h2>
-      <p>1) You have 5 pieces, and the AI has 5 pieces, all initially placed on the center line.</p>
-      <p>2) Roll the dice and click your piece to move it. Landing on a rosette grants an extra turn.</p>
-      <p>3) The objective is to move your pieces from the center line to the final line, following the Pente Grammai path.</p>
+      <p>1) The game supports both a standard dice roll and a custom dice. (Custom dice is removed on launch so the standard dice is active.)</p>
+      <p>2) I have 5 pieces, all initially placed on the center line.</p>
+      <p>3) Roll the dice and click your piece to attempt a move.</p>
+      <p>4) The objective is to move your pieces from the center line to the opposite center line, following an anti‑clockwise direction.</p>
+      <p>5) Occupied spaces cannot be landed on. If you attempt to move a piece onto an occupied space, the move is illegal.</p>
       <p>Press [M] to return to the Main Menu.</p>
     </div>
     <div id="difficultyScreen" class="overlayScreen">
@@ -169,6 +171,9 @@
     const SPACES_PER_LINE = 7;
     const PIECE_RADIUS = 15;
   
+    // Flag to select dice type (false = standard, true = custom)
+    let useCustomDice = false; // Custom dice disabled on launch
+  
     // Game state variables
     let pieces = []; // Array of piece objects: { line, space, color, isAI }
     let movesHistory = [];
@@ -207,7 +212,7 @@
       diceRolled = false;
       currentTurn = 'human';
   
-      // Place pieces on the center line (line index 2)
+      // Place 5 pieces for human and 5 pieces for AI on the center line (line index 2)
       if (humanSide === 'left') {
         // Human pieces on left side (spaces 0 to 4)
         for (let i = 0; i < 5; i++) {
@@ -269,39 +274,66 @@
       });
     };
   
-    // Handle board clicks for human moves
+    // Custom dice roll (currently disabled on launch)
+    const customDiceRoll = () => {
+      // Custom dice functionality can be implemented here.
+      // For now, it returns a standard dice roll value.
+      return Math.floor(Math.random() * 6) + 1;
+    };
+  
+    // Handle board clicks for human moves using distance check
     canvas.addEventListener('mousedown', (e) => {
       if (gameState !== "playing" || !diceRolled || currentTurn !== 'human') return;
   
       const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
-  
       const lineSpacing = GAME_HEIGHT / (LINE_COUNT + 1);
       const spaceSpacing = GAME_WIDTH / (SPACES_PER_LINE + 1);
   
-      // Determine the board coordinates from the mouse click
-      const clickedLine = Math.floor(mouseY / lineSpacing);
-      const clickedSpace = Math.floor(mouseX / spaceSpacing);
+      // Find a human piece whose drawn center is near the mouse click
+      let selectedIndex = -1;
+      for (let i = 0; i < pieces.length; i++) {
+        const piece = pieces[i];
+        if (!piece.isAI) {
+          const x = (piece.space + 1) * spaceSpacing;
+          const y = (piece.line + 1) * lineSpacing;
+          const dx = mouseX - x;
+          const dy = mouseY - y;
+          if (Math.sqrt(dx * dx + dy * dy) <= PIECE_RADIUS) {
+            selectedIndex = i;
+            break;
+          }
+        }
+      }
   
-      if (clickedLine < 0 || clickedLine >= LINE_COUNT || clickedSpace < 0 || clickedSpace >= SPACES_PER_LINE) return;
-  
-      const pieceIndex = pieces.findIndex(p => !p.isAI && p.line === clickedLine && p.space === clickedSpace);
-      if (pieceIndex === -1) {
-        console.warn("No piece found at the clicked location.");
+      if (selectedIndex === -1) {
+        console.warn("No piece found near the click.");
         return;
       }
   
-      // Determine new position based on dice roll and player's side
-      let newSpace = humanSide === 'left' ? clickedSpace + diceValue : clickedSpace - diceValue;
-      if (newSpace < 0 || newSpace >= SPACES_PER_LINE || pieces.some(p => p.line === clickedLine && p.space === newSpace)) {
-        console.warn("Invalid move: either out of bounds or space occupied.");
+      // Determine new space based on dice roll and player's side
+      const currentPiece = pieces[selectedIndex];
+      let newSpace = (humanSide === 'left') 
+                     ? currentPiece.space + diceValue 
+                     : currentPiece.space - diceValue;
+  
+      // Check for out-of-bounds or an occupied destination
+      if (newSpace < 0 || newSpace >= SPACES_PER_LINE) {
+        console.warn("Illegal move: out of bounds.");
+        addMoveToHistory("Illegal move: out of bounds.");
+        return;
+      }
+      if (pieces.some(p => p.line === currentPiece.line && p.space === newSpace)) {
+        console.warn("Illegal move: space is occupied.");
+        addMoveToHistory("Illegal move: space is occupied.");
         return;
       }
   
-      // Move the selected piece
-      pieces[pieceIndex].space = newSpace;
-      addMoveToHistory(`Human: Moved from space ${clickedSpace} to ${newSpace} on line ${clickedLine} (dice: ${diceValue})`);
+      // Move the selected piece and log the move
+      const previousSpace = currentPiece.space;
+      currentPiece.space = newSpace;
+      addMoveToHistory(`Human: Moved from space ${previousSpace} to ${newSpace} on line ${currentPiece.line} (dice: ${diceValue})`);
   
       // Reset dice and pass turn to AI
       diceRolled = false;
@@ -309,7 +341,6 @@
       diceResultSpan.textContent = "0";
       currentTurn = 'ai';
       redrawBoard();
-  
       setTimeout(aiTurn, 1200);
     });
   
@@ -317,11 +348,11 @@
     const aiTurn = () => {
       if (!pieces.some(p => p.isAI) || difficulty === "none") return;
   
+      // AI uses standard dice roll (custom dice option can be added similarly)
       diceValue = Math.floor(Math.random() * 6) + 1;
       diceResultSpan.textContent = diceValue;
   
       const aiPieces = pieces.filter(p => p.isAI);
-      let moved = false;
   
       // Attempt to move an AI piece based on dice roll
       aiPieces.some(piece => {
@@ -330,7 +361,6 @@
         if (newSpace >= 0 && newSpace < SPACES_PER_LINE && !pieces.some(p => p.line === piece.line && p.space === newSpace)) {
           piece.space = newSpace;
           addMoveToHistory(`AI: Moved from space ${oldSpace} to ${newSpace} on line ${piece.line} (dice: ${diceValue})`);
-          moved = true;
           return true; // Exit loop on successful move
         }
         return false;
@@ -350,7 +380,7 @@
         console.warn("Cannot roll dice right now.");
         return;
       }
-      diceValue = Math.floor(Math.random() * 6) + 1;
+      diceValue = useCustomDice ? customDiceRoll() : (Math.floor(Math.random() * 6) + 1);
       diceRolled = true;
       diceResultSpan.textContent = diceValue;
     });
