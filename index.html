@@ -452,6 +452,16 @@ function showMessage(text) {
     instructionsBtn.addEventListener('click', () => {
       showOverlay(instructionsScreen);
     });
+    easyBtn.addEventListener('click', () => {
+  difficulty = 'easy';
+});
+mediumBtn.addEventListener('click', () => {
+  difficulty = 'medium';
+});
+hardBtn.addEventListener('click', () => {
+  difficulty = 'hard';
+});
+
     leftSideBtn.addEventListener('click', () => {
       humanSide = 'left';
       startGame();
