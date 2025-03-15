@@ -19,12 +19,12 @@
       align-items: center;
       padding: 20px;
     }
-    /* Logo in bottom-right corner */
+    /* Logo Styling (fixed to bottom-right) */
     #logo {
       position: fixed;
       right: 10px;
       bottom: 10px;
-      width: 80px; /* Adjust as needed */
+      width: 80px;
       z-index: 999;
     }
     h1 {
@@ -183,8 +183,8 @@
     const GAME_WIDTH = canvas.width;
     const GAME_HEIGHT = canvas.height;
     const LINE_COUNT = 5;
-    // Changed from 7 to 10 to allow distinct positions for 10 pieces
-    const SPACES_PER_LINE = 10;
+    // Increase total board spaces to 14 to allow empty positions for movement.
+    const SPACES_PER_LINE = 14;
     const PIECE_RADIUS = 15;
     const HIT_TOLERANCE = 10;  // Extra tolerance for click detection
   
@@ -229,21 +229,22 @@
       currentTurn = 'human';
   
       // Place 5 human pieces and 5 AI pieces on the center line (line index 2)
+      // Use positions that leave an empty gap in the middle.
       if (humanSide === 'left') {
-        // Human pieces on left side (spaces 0 to 4)
+        // Human pieces on left side: positions 0 to 4
         for (let i = 0; i < 5; i++) {
           pieces.push({ line: 2, space: i, color: 'blue', isAI: false });
         }
-        // AI pieces on right side (spaces 9 down to 5)
+        // AI pieces on right side: positions 13 down to 9
         for (let i = 0; i < 5; i++) {
           pieces.push({ line: 2, space: SPACES_PER_LINE - 1 - i, color: 'red', isAI: true });
         }
       } else {
-        // Human pieces on right side (spaces 9 down to 5)
+        // Human pieces on right side: positions 13 down to 9
         for (let i = 0; i < 5; i++) {
           pieces.push({ line: 2, space: SPACES_PER_LINE - 1 - i, color: 'blue', isAI: false });
         }
-        // AI pieces on left side (spaces 0 to 4)
+        // AI pieces on left side: positions 0 to 4
         for (let i = 0; i < 5; i++) {
           pieces.push({ line: 2, space: i, color: 'red', isAI: true });
         }
@@ -416,12 +417,20 @@
     document.getElementById('mediumBtn').addEventListener('click', () => { difficulty = 'medium'; });
     document.getElementById('hardBtn').addEventListener('click', () => { difficulty = 'hard'; });
   
-    // Side selection buttons
+    // Side selection buttons now check for a selected difficulty first.
     document.getElementById('leftSideBtn').addEventListener('click', () => {
+      if (!difficulty) {
+        alert("Please select a difficulty first.");
+        return;
+      }
       humanSide = 'left';
       startGame();
     });
     document.getElementById('rightSideBtn').addEventListener('click', () => {
+      if (!difficulty) {
+        alert("Please select a difficulty first.");
+        return;
+      }
       humanSide = 'right';
       startGame();
     });
