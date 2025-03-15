@@ -19,7 +19,7 @@
       align-items: center;
       padding: 20px;
     }
-    /* Logo (fixed to bottom-right) */
+    /* Logo Styling (fixed to bottom-right) */
     #logo {
       position: fixed;
       right: 10px;
@@ -118,7 +118,7 @@
   </style>
 </head>
 <body>
-  <!-- Logo -->
+  <!-- Logo (fixed to bottom-right) -->
   <img src="logo.png" alt="Logo" id="logo">
   
   <h1>Another Product Invented<br>Pente Grammai</h1>
@@ -177,39 +177,21 @@
   
   <script>
     'use strict';
-    // --- Global Movement Path Definition ---
-    // This array defines the route along which pieces travel.
-    // For humanSide "left": blue (human) pieces progress forward (increasing index)
-    // and red (AI) pieces progress in reverse (decreasing index).
-    const movementPath = [
-      { line: 2, space: 0 },  // index 0: Blue starting point
-      { line: 2, space: 1 },  // index 1
-      { line: 2, space: 2 },  // index 2
-      { line: 2, space: 3 },  // index 3
-      { line: 2, space: 4 },  // index 4: Blue finish (or transition)
-      { line: 1, space: 4 },  // index 5
-      { line: 0, space: 4 },  // index 6: Red starting point
-      { line: 0, space: 3 },  // index 7
-      { line: 0, space: 2 },  // index 8
-      { line: 0, space: 1 }   // index 9: Red finish (or transition)
-    ];
-    const PATH_LENGTH = movementPath.length;
-  
-    // --- Canvas and Board Settings ---
+    // Canvas and Board Settings
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
     const GAME_WIDTH = canvas.width;
     const GAME_HEIGHT = canvas.height;
-    const LINE_COUNT = 5;  // still drawing 5 horizontal lines
+    const LINE_COUNT = 5; // 5 horizontal lines (0 to 4); center line is index 2
     const PIECE_RADIUS = 15;
-    const HIT_TOLERANCE = 10;  // for click detection
+    const HIT_TOLERANCE = 10;  // Extra tolerance for click detection
   
-    // --- Dice Flag ---
-    let useCustomDice = false; // remains available in code but not mentioned in UI
+    // Dice flag (custom dice remains in code but is not active)
+    let useCustomDice = false;
   
-    // --- Game State Variables ---
-    // Each piece now stores a "pathIndex" (instead of "space")
-    let pieces = []; // Each piece: { pathIndex, color, isAI }
+    // Game state variables
+    // Each piece: { line, space, color, isAI }
+    let pieces = [];
     let movesHistory = [];
     let difficulty = null;
     let humanSide = null; // 'left' or 'right'
@@ -218,7 +200,7 @@
     let diceRolled = false;
     let gameState = "menu";
   
-    // --- DOM Elements ---
+    // DOM Elements
     const menuScreen = document.getElementById("menuScreen");
     const instructionsScreen = document.getElementById("instructionsScreen");
     const difficultyScreen = document.getElementById("difficultyScreen");
@@ -227,7 +209,7 @@
     const diceResultSpan = document.getElementById("diceResult");
     const movesList = document.getElementById("movesList");
   
-    // Show one overlay screen and hide others
+    // Show one overlay screen
     const showOverlay = (overlay) => {
       [menuScreen, instructionsScreen, difficultyScreen, gameOverScreen].forEach(screen => {
         screen.style.display = "none";
@@ -235,7 +217,7 @@
       if (overlay) overlay.style.display = "flex";
     };
   
-    // --- Start or Restart Game ---
+    // Start or Restart Game
     const startGame = () => {
       pieces = [];
       movesHistory = [];
@@ -245,24 +227,27 @@
       diceRolled = false;
       currentTurn = 'human';
   
-      // Set up pieces based on chosen side.
-      // For humanSide "left": 
-      //   Blue pieces (human) get starting pathIndices 0,1,2,3,4.
-      //   Red pieces (AI) get starting pathIndices 9,8,7,6,5.
-      // For humanSide "right", swap the assignments.
+      // Place all 10 pieces on the center line (line index 2)
+      // For humanSide "left": blue pieces on left half, red pieces on right half.
+      // For humanSide "right": swap the assignments.
       if (humanSide === 'left') {
+        // Blue pieces: assign columns 0,1,2,3,4.
         for (let i = 0; i < 5; i++) {
-          pieces.push({ pathIndex: i, color: 'blue', isAI: false });
+          pieces.push({ line: 2, space: i, color: 'blue', isAI: false });
         }
+        // Red pieces: assign columns 6,5,4,3,2.
+        // (They start on the same line but on the opposite half; note overlap is avoided by ordering.)
         for (let i = 0; i < 5; i++) {
-          pieces.push({ pathIndex: PATH_LENGTH - 1 - i, color: 'red', isAI: true });
+          pieces.push({ line: 2, space: 6 - i, color: 'red', isAI: true });
         }
       } else { // humanSide === 'right'
+        // Blue pieces: assign columns 6,5,4,3,2.
         for (let i = 0; i < 5; i++) {
-          pieces.push({ pathIndex: PATH_LENGTH - 1 - i, color: 'blue', isAI: false });
+          pieces.push({ line: 2, space: 6 - i, color: 'blue', isAI: false });
         }
+        // Red pieces: assign columns 0,1,2,3,4.
         for (let i = 0; i < 5; i++) {
-          pieces.push({ pathIndex: i, color: 'red', isAI: true });
+          pieces.push({ line: 2, space: i, color: 'red', isAI: true });
         }
       }
   
@@ -271,14 +256,14 @@
       redrawBoard();
     };
   
-    // --- Redraw Board ---
+    // Redraw the board
     const redrawBoard = () => {
       ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
       drawLines();
       drawPieces();
     };
   
-    // Draw horizontal lines (unchanged)
+    // Draw 5 horizontal lines (evenly spaced)
     const drawLines = () => {
       const lineSpacing = GAME_HEIGHT / (LINE_COUNT + 1);
       ctx.strokeStyle = "#000";
@@ -292,19 +277,14 @@
       }
     };
   
-    // Draw pieces using their movementPath coordinates.
+    // Draw all pieces using their (line, space) coordinates on the grid
     const drawPieces = () => {
-      // We'll map the movementPath "space" and "line" to canvas coordinates.
-      // Our movementPath values are in a 0–4 range for space and 0–? for line.
-      // For simplicity, let’s assume max "space" in movementPath is 4.
-      const xSpacing = GAME_WIDTH / 6; // (max space 4 + 1) = 5, add 1 for margin =6
-      const ySpacing = GAME_HEIGHT / 4; // (max line is 2 in our path, so 2+1=3, add 1=4)
+      const lineSpacing = GAME_HEIGHT / (LINE_COUNT + 1);
+      const spaceSpacing = GAME_WIDTH / 8; // assume 7 spaces -> margin on each side
   
       pieces.forEach(piece => {
-        // Look up the coordinate from movementPath based on piece.pathIndex.
-        const pos = movementPath[piece.pathIndex];
-        const x = (pos.space + 1) * xSpacing;
-        const y = (pos.line + 1) * ySpacing;
+        const y = (piece.line + 1) * lineSpacing;
+        const x = (piece.space + 1) * spaceSpacing;
         ctx.fillStyle = piece.color;
         ctx.beginPath();
         ctx.arc(x, y, PIECE_RADIUS, 0, Math.PI * 2);
@@ -312,81 +292,72 @@
       });
     };
   
-    // --- Dice Roll ---
+    // Custom dice roll (remains in code)
     const customDiceRoll = () => {
       return Math.floor(Math.random() * 6) + 1;
     };
-    document.getElementById('diceRollBtn').addEventListener('click', () => {
-      if (gameState !== "playing" || currentTurn !== 'human' || diceRolled) {
-        console.warn("Cannot roll dice right now.");
-        return;
-      }
-      diceValue = useCustomDice ? customDiceRoll() : (Math.floor(Math.random() * 6) + 1);
-      diceRolled = true;
-      diceResultSpan.textContent = diceValue;
-    });
   
-    // --- Handle Click on a Human Piece to Move it ---
+    // --- Movement: Now vertical ---
+    // When a human piece is clicked, it will move vertically from the center line toward an edge.
+    // For humanSide "left", blue pieces move upward (decreasing line index).
+    // For humanSide "right", blue pieces move downward (increasing line index).
     canvas.addEventListener('mousedown', (e) => {
       if (gameState !== "playing" || !diceRolled || currentTurn !== 'human') return;
   
       const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
+      const lineSpacing = GAME_HEIGHT / (LINE_COUNT + 1);
+      const spaceSpacing = GAME_WIDTH / 8;
   
-      // Use same xSpacing and ySpacing as in drawPieces.
-      const xSpacing = GAME_WIDTH / 6;
-      const ySpacing = GAME_HEIGHT / 4;
-  
-      // Find a human piece near the click by checking its drawn coordinates.
+      // Find a human (blue) piece near the click.
       let selectedIndex = -1;
       for (let i = 0; i < pieces.length; i++) {
         const piece = pieces[i];
         if (!piece.isAI) {
-          const pos = movementPath[piece.pathIndex];
-          const x = (pos.space + 1) * xSpacing;
-          const y = (pos.line + 1) * ySpacing;
+          const x = (piece.space + 1) * spaceSpacing;
+          const y = (piece.line + 1) * lineSpacing;
           const dx = mouseX - x;
           const dy = mouseY - y;
-          if (Math.sqrt(dx * dx + dy * dy) <= PIECE_RADIUS + HIT_TOLERANCE) {
+          if (Math.sqrt(dx*dx + dy*dy) <= PIECE_RADIUS + HIT_TOLERANCE) {
             selectedIndex = i;
             break;
           }
         }
       }
-  
       if (selectedIndex === -1) {
         console.warn("No piece found near the click.");
         return;
       }
   
-      // Compute new path index based on dice roll.
       const currentPiece = pieces[selectedIndex];
-      let newIndex;
+      let newLine;
       if (humanSide === 'left') {
-        newIndex = currentPiece.pathIndex + diceValue;
+        // Move upward
+        newLine = currentPiece.line - diceValue;
       } else {
-        newIndex = currentPiece.pathIndex - diceValue;
+        // Move downward
+        newLine = currentPiece.line + diceValue;
       }
   
-      // Check bounds of the movementPath.
-      if (newIndex < 0 || newIndex >= PATH_LENGTH) {
+      // Check bounds (valid line indices: 0 to LINE_COUNT-1)
+      if (newLine < 0 || newLine >= LINE_COUNT) {
         console.warn("Illegal move: out of bounds.");
         addMoveToHistory("Illegal move: out of bounds.");
         return;
       }
-      // Check if any other piece occupies the destination (i.e. has the same pathIndex).
-      if (pieces.some(p => p !== currentPiece && p.pathIndex === newIndex)) {
+      // Check if destination is occupied (same column/space)
+      if (pieces.some(p => p.line === newLine && p.space === currentPiece.space)) {
         console.warn("Illegal move: space is occupied.");
         addMoveToHistory("Illegal move: space is occupied.");
         return;
       }
   
-      const previousIndex = currentPiece.pathIndex;
-      currentPiece.pathIndex = newIndex;
-      addMoveToHistory(`Human: Moved from step ${previousIndex} to ${newIndex} (dice: ${diceValue})`);
+      const previousLine = currentPiece.line;
+      currentPiece.line = newLine;
+      addMoveToHistory(`Human: Moved from line ${previousLine} to ${newLine} (dice: ${diceValue})`);
   
-      // Reset dice and switch turn to AI.
+      // Reset dice and switch turn to AI
       diceRolled = false;
       diceValue = 0;
       diceResultSpan.textContent = "0";
@@ -396,28 +367,30 @@
     });
   
     // --- AI Turn ---
+    // AI moves in the opposite vertical direction.
     const aiTurn = () => {
       if (!pieces.some(p => p.isAI) || difficulty === "none") return;
   
       diceValue = Math.floor(Math.random() * 6) + 1;
       diceResultSpan.textContent = diceValue;
   
-      // AI moves in the opposite direction to human.
       const aiPieces = pieces.filter(p => p.isAI);
       let moved = false;
       for (let i = 0; i < aiPieces.length; i++) {
         const piece = aiPieces[i];
-        let newIndex;
+        let newLine;
         if (humanSide === 'left') {
-          newIndex = piece.pathIndex - diceValue;
+          // If human moves upward, AI moves downward.
+          newLine = piece.line + diceValue;
         } else {
-          newIndex = piece.pathIndex + diceValue;
+          // If human moves downward, AI moves upward.
+          newLine = piece.line - diceValue;
         }
-        if (newIndex >= 0 && newIndex < PATH_LENGTH &&
-            !pieces.some(p => p !== piece && p.pathIndex === newIndex)) {
-          const oldIndex = piece.pathIndex;
-          piece.pathIndex = newIndex;
-          addMoveToHistory(`AI: Moved from step ${oldIndex} to ${newIndex} (dice: ${diceValue})`);
+        if (newLine >= 0 && newLine < LINE_COUNT &&
+            !pieces.some(p => p.line === newLine && p.space === piece.space)) {
+          const oldLine = piece.line;
+          piece.line = newLine;
+          addMoveToHistory(`AI: Moved from line ${oldLine} to ${newLine} (dice: ${diceValue})`);
           moved = true;
           break;
         }
@@ -430,12 +403,23 @@
       redrawBoard();
     };
   
+    // --- Dice Roll ---
+    document.getElementById('diceRollBtn').addEventListener('click', () => {
+      if (gameState !== "playing" || currentTurn !== 'human' || diceRolled) {
+        console.warn("Cannot roll dice right now.");
+        return;
+      }
+      diceValue = useCustomDice ? customDiceRoll() : (Math.floor(Math.random() * 6) + 1);
+      diceRolled = true;
+      diceResultSpan.textContent = diceValue;
+    });
+  
     // --- Move History ---
     const addMoveToHistory = (message) => {
       movesHistory.push(message);
-      const li = document.createElement('li');
-      li.textContent = message;
-      movesList.appendChild(li);
+      const listItem = document.createElement('li');
+      listItem.textContent = message;
+      movesList.appendChild(listItem);
       movesList.scrollTop = movesList.scrollHeight;
     };
   
@@ -448,7 +432,7 @@
     document.getElementById('mediumBtn').addEventListener('click', () => { difficulty = 'medium'; });
     document.getElementById('hardBtn').addEventListener('click', () => { difficulty = 'hard'; });
   
-    // Side selection buttons now require a difficulty selection.
+    // Side selection buttons now require a difficulty to be chosen first.
     document.getElementById('leftSideBtn').addEventListener('click', () => {
       if (!difficulty) {
         alert("Please select a difficulty first.");
@@ -468,6 +452,7 @@
   
     document.getElementById('gameOverNewGameBtn').addEventListener('click', () => showOverlay(menuScreen));
   
+    // Keyboard shortcut: [M] returns to Main Menu.
     document.addEventListener('keydown', (e) => {
       if (e.key.toLowerCase() === 'm') showOverlay(menuScreen);
     });
