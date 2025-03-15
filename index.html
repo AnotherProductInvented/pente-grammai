@@ -237,12 +237,11 @@ if (humanSide === 'left') {
   }
 } else {
   // Human (Right side) = 7–11, AI (Left side) = 7–11 [reverse side]
-  for (let i = 0; i < 5; i++) {
-    pieces.push({ row: startRow, space: 7 + i, color: 'blue', isAI: false });
-  }
-  for (let i = 0; i < 5; i++) {
-    pieces.push({ row: startRow, space: 7 + i, color: 'red', isAI: true });
-  }
+for (let i = 0; i < 5; i++) {
+  pieces.push({ row: startRow, space: 7 + i, color: 'blue', isAI: false });
+}
+for (let i = 0; i < 5; i++) {
+  pieces.push({ row: startRow, space: i, color: 'red', isAI: true });
 }
 
 
@@ -366,15 +365,16 @@ for (let i = 0; i < aiPieces.length; i++) {
 
   if (targetRow < 0 || targetRow >= LINE_COUNT) continue;
 
-const edgeSpace = (humanSide === 'left') ? 0 : TOTAL_COLUMNS - 1;
-const isOccupied = pieces.some(pp => pp !== p && pp.row === targetRow && pp.space === edgeSpace);
-if (isOccupied) continue;
-p.space = edgeSpace;
-
-
   const oldRow = p.row;
   p.row = targetRow;
-  p.space = (humanSide === 'left') ? TOTAL_COLUMNS - 1 : 0;
+  const edgeSpace = (humanSide === 'left') ? 0 : TOTAL_COLUMNS - 1;
+const isOccupied = pieces.some(pp => pp !== p && pp.row === targetRow && pp.space === edgeSpace);
+if (isOccupied) {
+  continue;
+}
+
+p.space = edgeSpace;
+
 
   
   addMoveToHistory(`AI moved piece from row ${oldRow} to row ${targetRow} (dice=${diceValue}).`);
