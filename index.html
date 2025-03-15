@@ -216,23 +216,14 @@
       diceResultSpan.textContent = "0";
       diceRolled = false;
       currentTurn = 'human';
-      let startY = GAME_HEIGHT / 2; // Center line vertically
+      let startY = GAME_HEIGHT / 2; // Center vertically
       console.log("[DEBUG] startY (center) =", startY);
       
-      // For humanSide 'left':
-      //   Blue pieces (human) start on the right half (columns 5–9)
-      //   Red pieces (AI) start on the left half (columns 0–4)
+      // Starting Positions:
+      // If humanSide is "left", we want blue (human) pieces to be on the left half (columns 0–4)
+      // and red (AI) pieces on the right half (columns 5–9).
+      // If humanSide is "right", swap the assignments.
       if (humanSide === 'left') {
-        for (let i = 0; i < 5; i++) {
-          pieces.push({ y: startY, space: i + 5, color: 'blue', isAI: false });
-          console.log("[DEBUG] Added blue piece at y =", startY, "space =", i + 5);
-        }
-        for (let i = 0; i < 5; i++) {
-          pieces.push({ y: startY, space: i, color: 'red', isAI: true });
-          console.log("[DEBUG] Added red piece at y =", startY, "space =", i);
-        }
-      } else { // humanSide === 'right'
-        // For humanSide 'right', blue pieces start on the left half, red on the right half.
         for (let i = 0; i < 5; i++) {
           pieces.push({ y: startY, space: i, color: 'blue', isAI: false });
           console.log("[DEBUG] Added blue piece at y =", startY, "space =", i);
@@ -240,6 +231,15 @@
         for (let i = 0; i < 5; i++) {
           pieces.push({ y: startY, space: i + 5, color: 'red', isAI: true });
           console.log("[DEBUG] Added red piece at y =", startY, "space =", i + 5);
+        }
+      } else { // humanSide === 'right'
+        for (let i = 0; i < 5; i++) {
+          pieces.push({ y: startY, space: i + 5, color: 'blue', isAI: false });
+          console.log("[DEBUG] Added blue piece at y =", startY, "space =", i + 5);
+        }
+        for (let i = 0; i < 5; i++) {
+          pieces.push({ y: startY, space: i, color: 'red', isAI: true });
+          console.log("[DEBUG] Added red piece at y =", startY, "space =", i);
         }
       }
       gameState = "playing";
@@ -329,7 +329,7 @@
       console.log("[DEBUG] Mouse click at (" + mouseX + ", " + mouseY + ")");
       const spaceSpacing = GAME_WIDTH / (TOTAL_COLUMNS + 1);
   
-      // Find the human (blue) piece near the click.
+      // Find a human (blue) piece near the click.
       let selectedIndex = -1;
       for (let i = 0; i < pieces.length; i++) {
         const piece = pieces[i];
@@ -369,7 +369,7 @@
         }
       }
   
-      // Check occupancy (exclude the current piece itself)
+      // Check occupancy (excluding the current piece)
       if (pieces.some(p => p !== currentPiece && p.y === currentPiece.y && p.space === newSpace)) {
         console.warn("[DEBUG] Illegal move: space is occupied at space", newSpace, "y =", currentPiece.y);
         addMoveToHistory("Illegal move: space is occupied.");
@@ -408,14 +408,16 @@
         const piece = aiPieces[i];
         let newSpace;
         if (humanSide === 'left') {
-          newSpace = piece.space + diceValue; // AI moves right if human moves left.
+          // If human moves left, AI moves right.
+          newSpace = piece.space + diceValue;
           console.log("[DEBUG] AI (humanSide left): calculated newSpace =", newSpace);
           if (newSpace >= TOTAL_COLUMNS) {
             console.log("[DEBUG] AI clamping newSpace to", TOTAL_COLUMNS - 1);
             newSpace = TOTAL_COLUMNS - 1;
           }
         } else {
-          newSpace = piece.space - diceValue; // AI moves left if human moves right.
+          // If human moves right, AI moves left.
+          newSpace = piece.space - diceValue;
           console.log("[DEBUG] AI (humanSide right): calculated newSpace =", newSpace);
           if (newSpace < 0) {
             console.log("[DEBUG] AI clamping newSpace to 0");
@@ -512,9 +514,7 @@
     redrawBoard();
   
     // --- Main Animation Loop (optional) ---
-    const gameLoop = () => {
-      requestAnimationFrame(gameLoop);
-    };
+    const gameLoop = () => { requestAnimationFrame(gameLoop); };
     requestAnimationFrame(gameLoop);
     console.log("[DEBUG] Main animation loop started");
   </script>
