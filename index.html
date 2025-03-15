@@ -281,58 +281,47 @@ canvas.addEventListener('mousedown', (e) => {
   let selected = pieces.find(p => !p.isAI && Math.hypot(mx - lineSpaceToCoords(p.row, p.space).x, my - lineSpaceToCoords(p.row, p.space).y) <= PIECE_RADIUS + HIT_TOLERANCE);
   if (!selected) return;
 
-  let targetRow = selected.row;
-  let targetSpace = selected.space;
+  let stepsRemaining = diceValue;
 
-if (!selected.phase) selected.phase = 'center';
+  while (stepsRemaining > 0) {
+    if (!selected.phase) selected.phase = 'center';
 
-let stepsRemaining = diceValue;
-while (stepsRemaining > 0) {
-  if (selected.phase === 'center') {
-    const nextRow = (humanSide === 'left') ? selected.row - 1 : selected.row + 1;
-    if (nextRow >= 0 && nextRow < LINE_COUNT) {
+    if (selected.phase === 'center') {
+      const nextRow = (humanSide === 'left') ? selected.row - 1 : selected.row + 1;
       selected.row = nextRow;
-      if (selected.row === 0 && humanSide === 'left') {
-        selected.phase = 'edge';
-      } else if (selected.row === LINE_COUNT - 1 && humanSide === 'right') {
+      if ((humanSide === 'left' && selected.row <= 0) || (humanSide === 'right' && selected.row >= LINE_COUNT - 1)) {
         selected.phase = 'edge';
       }
+    } else if (selected.phase === 'edge') {
+      selected.space += (humanSide === 'left') ? 1 : -1;
+      if ((humanSide === 'left' && selected.space >= TOTAL_COLUMNS - 1) || (humanSide === 'right' && selected.space <= 0)) {
+        selected.phase = 'corner';
+      }
+    } else if (selected.phase === 'corner') {
+      selected.row += (humanSide === 'left') ? 1 : -1;
+      if (selected.row === 2) {
+        selected.phase = 'entry';
+      }
+    } else if (selected.phase === 'entry') {
+      showMessage("🎉 Piece completed its journey!");
+      break;
     }
-  } else if (selected.phase === 'edge') {
-    selected.space += (humanSide === 'left') ? 1 : -1;
-    if ((humanSide === 'left' && selected.space >= TOTAL_COLUMNS - 1) || (humanSide === 'right' && selected.space <= 0)) {
-      selected.phase = 'corner';
-    }
-  } else if (selected.phase === 'corner') {
-    const nextRow = (humanSide === 'left') ? selected.row + 1 : selected.row - 1;
-    selected.row = nextRow;
-    if (selected.row === 2) {
-      selected.phase = 'entry';
-    }
-  } else if (selected.phase === 'entry') {
-    showMessage("🎉 Piece completed its journey!");
-    break;
+    stepsRemaining--;
   }
-  stepsRemaining--;
-}
 
-let occupied = false;
+  // Check if this edge row is already taken (one piece per row, except center)
+  let occupied = false;
+  if (selected.row !== 2) {
+    occupied = pieces.some(pp => pp !== selected && pp.row === selected.row);
+  }
+  occupied = occupied || pieces.some(pp => pp !== selected && pp.row === selected.row && pp.space === selected.space);
 
-// Prevent multiple same-color pieces on same side row (excluding center row 2)
-if (selected.row !== 2) {
-  occupied = pieces.some(pp => pp !== selected && pp.row === selected.row && pp.color === selected.color);
-}
+  if (occupied) {
+    showMessage("⚠️ Space is occupied");
+    return;
+  }
 
-// Also check if exact space is already taken
-occupied = occupied || pieces.some(pp => pp !== selected && pp.row === selected.row && pp.space === selected.space);
-
-if (occupied) {
-  showMessage("⚠️ Space is occupied");
-  return;
-}
-
-
-  addMoveToHistory(`Human moved to row ${targetRow}, space ${targetSpace}`);
+  addMoveToHistory(`Human moved to row ${selected.row}, space ${selected.space}`);
   diceValue = 0;
   diceRolled = false;
   diceResultSpan.textContent = "0";
@@ -340,6 +329,7 @@ if (occupied) {
   redrawBoard();
   setTimeout(aiTurn, 1000);
 });
+
 
     console.log("[DEBUG] Canvas mousedown event listener attached");
 
@@ -353,66 +343,56 @@ function aiTurn() {
   const aiOrder = (humanSide === 'left') ? aiPieces.slice().reverse() : aiPieces;
 
   let moved = false;
- for (let p of aiOrder) {
-  let tempRow = p.row;
-  let tempSpace = p.space;
-  let tempPhase = p.phase || 'center';
 
-  let stepsRemaining = diceValue;
-  let valid = true;
+  for (let p of aiOrder) {
+    let tempRow = p.row;
+    let tempSpace = p.space;
+    let tempPhase = p.phase || 'center';
 
-  while (stepsRemaining > 0) {
-  if (tempPhase === 'center') {
-    const nextRow = (humanSide === 'left') ? tempRow - 1 : tempRow + 1;
-    if (nextRow >= 0 && nextRow < LINE_COUNT) {
-      tempRow = nextRow;
-      if (tempRow === 0 && humanSide === 'left') {
-        tempPhase = 'edge';
-      } else if (tempRow === LINE_COUNT - 1 && humanSide === 'right') {
-        tempPhase = 'edge';
+    let stepsRemaining = diceValue;
+    let valid = true;
+
+    while (stepsRemaining > 0 && valid) {
+      if (tempPhase === 'center') {
+        const nextRow = (humanSide === 'left') ? tempRow - 1 : tempRow + 1;
+        tempRow = nextRow;
+        if ((humanSide === 'left' && tempRow <= 0) || (humanSide === 'right' && tempRow >= LINE_COUNT - 1)) {
+          tempPhase = 'edge';
+        }
+      } else if (tempPhase === 'edge') {
+        tempSpace += (humanSide === 'left') ? 1 : -1;
+        if ((humanSide === 'left' && tempSpace >= TOTAL_COLUMNS - 1) || (humanSide === 'right' && tempSpace <= 0)) {
+          tempPhase = 'corner';
+        }
+      } else if (tempPhase === 'corner') {
+        tempRow += (humanSide === 'left') ? 1 : -1;
+        if (tempRow === 2) {
+          tempPhase = 'entry';
+        }
+      } else if (tempPhase === 'entry') {
+        valid = false;
       }
+      stepsRemaining--;
     }
-  } else if (tempPhase === 'edge') {
-    tempSpace += (humanSide === 'left') ? 1 : -1;
-    if ((humanSide === 'left' && tempSpace >= TOTAL_COLUMNS - 1) || (humanSide === 'right' && tempSpace <= 0)) {
-      tempPhase = 'corner';
+
+    // Check if the position is occupied
+    let occupied = false;
+    if (tempRow !== 2) {
+      occupied = pieces.some(pp => pp !== p && pp.row === tempRow);
     }
-  } else if (tempPhase === 'corner') {
-    const nextRow = (humanSide === 'left') ? tempRow + 1 : tempRow - 1;
-    tempRow = nextRow;
-    if (tempRow === 2) {
-      tempPhase = 'entry';
-    }
-  } else if (tempPhase === 'entry') {
-    valid = false; // Already finished
+    occupied = occupied || pieces.some(pp => pp !== p && pp.row === tempRow && pp.space === tempSpace);
+
+    if (occupied || !valid) continue;
+
+    const oldRow = p.row;
+    const oldSpace = p.space;
+    p.row = tempRow;
+    p.space = tempSpace;
+    p.phase = tempPhase;
+
+    addMoveToHistory(`AI moved piece from row ${oldRow}, space ${oldSpace} to row ${tempRow}, space ${tempSpace}`);
+    moved = true;
     break;
-  }
-  stepsRemaining--;
-}
-
-
-  let occupied = pieces.some(pp => pp !== p && pp.row === tempRow && pp.space === tempSpace);
-  if (occupied || !valid) continue;
-
-  const oldRow = p.row;
-  const oldSpace = p.space;
-
-occupied = false;
-if (tempRow !== 2) {
-  occupied = pieces.some(pp => pp !== p && pp.row === tempRow);
-
-}
-occupied = occupied || pieces.some(pp => pp !== p && pp.row === tempRow && pp.space === tempSpace);
-
-if (occupied || !valid) continue;
-
-  p.row = tempRow;
-  p.space = tempSpace;
-  p.phase = tempPhase;
-
-  addMoveToHistory(`AI moved piece from row ${oldRow}, space ${oldSpace} to row ${tempRow}, space ${tempSpace}`);
-  moved = true;
-  break;
   }
 
   if (!moved) addMoveToHistory("AI could not move any piece.");
@@ -424,6 +404,7 @@ if (occupied || !valid) continue;
   redrawBoard();
   console.log("[DEBUG] AI turn ended, switching back to human.");
 }
+
 
     console.log("[DEBUG] aiTurn defined");
 
