@@ -397,7 +397,7 @@ function aiTurn() {
   const oldRow = p.row;
   const oldSpace = p.space;
 
-let occupied = false;
+occupied = false;
 if (tempRow !== 2) {
   occupied = pieces.some(pp => pp !== p && pp.row === tempRow);
 
