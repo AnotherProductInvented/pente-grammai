@@ -352,42 +352,31 @@
       diceValue = Math.floor(Math.random() * 6) + 1;
       diceResultSpan.textContent = diceValue;
       console.log("[DEBUG] AI rolled dice:", diceValue);
+const aiPieces = pieces.filter(p => p.isAI);
+let moved = false;
 
-      // Determine how many rows the AI should move based on difficulty.
-      const moveDistance = getAIMoveDistance();
-      addMoveToHistory(`AI will attempt to move ${moveDistance} row(s).`);
+for (let i = 0; i < aiPieces.length; i++) {
+  const p = aiPieces[i];
+  let targetRow = (humanSide === 'left') ? p.row + 1 : p.row - 1;
 
-      const aiPieces = pieces.filter(p => p.isAI);
-      let moved = false;
-      for (let i = 0; i < aiPieces.length; i++) {
-        const p = aiPieces[i];
-        // Determine target row for AI move: move in opposite direction of human.
-        let targetRow;
-        if (humanSide === 'left') {
-          targetRow = p.row + moveDistance;
-        } else {
-          targetRow = p.row - moveDistance;
-        }
-        // Clamp target row to valid bounds
-        if (targetRow < 0) targetRow = 0;
-        if (targetRow >= LINE_COUNT) targetRow = LINE_COUNT - 1;
-        // For non-center rows, check if highlighted cell (col 6) is free.
-        if (targetRow !== 2) {
-          if (pieces.some(pp => pp !== p && pp.row === targetRow && pp.space === 6)) {
-            console.log(`[DEBUG] AI piece at row ${p.row} cannot move to row ${targetRow} (cell occupied).`);
-            continue;
-          }
-        }
-        const oldRow = p.row;
-        p.row = targetRow;
-        p.space = 6; // Move to highlighted cell
-        addMoveToHistory(`AI moved piece from row ${oldRow} to row ${targetRow} (dice=${diceValue}).`);
-        moved = true;
-        break;
-      }
-      if (!moved) {
-        addMoveToHistory("AI could not move any piece.");
-      }
+  if (targetRow < 0 || targetRow >= LINE_COUNT) continue;
+
+  if (targetRow !== 2) {
+    if (pieces.some(pp => pp !== p && pp.row === targetRow && pp.space === 6)) continue;
+  }
+
+  const oldRow = p.row;
+  p.row = targetRow;
+  p.space = 6;
+  addMoveToHistory(`AI moved piece from row ${oldRow} to row ${targetRow} (dice=${diceValue}).`);
+  moved = true;
+  break;
+}
+
+if (!moved) {
+  addMoveToHistory("AI could not move any piece.");
+}
+
       diceValue = 0;
       diceRolled = false;
       diceResultSpan.textContent = "0";
