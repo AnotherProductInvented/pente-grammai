@@ -316,6 +316,20 @@ while (stepsRemaining > 0) {
   stepsRemaining--;
 }
 
+let occupied = false;
+
+// Prevent multiple same-color pieces on same side row (excluding center row 2)
+if (selected.row !== 2) {
+  occupied = pieces.some(pp => pp !== selected && pp.row === selected.row && pp.color === selected.color);
+}
+
+// Also check if exact space is already taken
+occupied = occupied || pieces.some(pp => pp !== selected && pp.row === selected.row && pp.space === selected.space);
+
+if (occupied) {
+  showMessage("⚠️ Space is occupied");
+  return;
+}
 
 
   addMoveToHistory(`Human moved to row ${targetRow}, space ${targetSpace}`);
@@ -382,6 +396,16 @@ function aiTurn() {
 
   const oldRow = p.row;
   const oldSpace = p.space;
+
+let occupied = false;
+if (tempRow !== 2) {
+  occupied = pieces.some(pp => pp !== p && pp.row === tempRow);
+
+}
+occupied = occupied || pieces.some(pp => pp !== p && pp.row === tempRow && pp.space === tempSpace);
+
+if (occupied || !valid) continue;
+
   p.row = tempRow;
   p.space = tempSpace;
   p.phase = tempPhase;
