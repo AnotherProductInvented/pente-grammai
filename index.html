@@ -96,7 +96,7 @@
   </style>
 </head>
 <body>
-  <!-- Logo (adjust source as needed) -->
+  <!-- Logo (replace "logo.png" with your logo source) -->
   <img src="logo.png" alt="Logo" id="logo">
   <h1>Another Product Invented<br>Pente Grammai</h1>
   
@@ -161,21 +161,22 @@
     const ctx = canvas.getContext("2d");
     const GAME_WIDTH = canvas.width;
     const GAME_HEIGHT = canvas.height;
-    const LINE_COUNT = 5; // Rows: indices 0 (top) to 4 (bottom)
+    const LINE_COUNT = 5; // Rows 0 (top) to 4 (bottom)
     const PIECE_RADIUS = 15;
     const HIT_TOLERANCE = 10;
-    const TOTAL_COLUMNS = 10; // Columns 0 to 9
+    // Increase total columns so that there's a gap for movement.
+    const TOTAL_COLUMNS = 12; // Columns 0 to 11
     console.log("[DEBUG] Board constants: GAME_WIDTH =", GAME_WIDTH, "GAME_HEIGHT =", GAME_HEIGHT, "LINE_COUNT =", LINE_COUNT, "TOTAL_COLUMNS =", TOTAL_COLUMNS);
 
-    // --- Movement: vertical movement (1 row per dice point) ---
-    console.log("[DEBUG] Movement: 1 row per dice point");
+    // --- Movement: 1 column per dice point (horizontal movement)
+    console.log("[DEBUG] Movement: 1 column per dice point");
 
     // --- Dice Flag ---
     let useCustomDice = false;
     console.log("[DEBUG] useCustomDice =", useCustomDice);
 
     // --- Game State Variables ---
-    // We'll store pieces as { row, space, color, isAI }
+    // Each piece: { row, space, color, isAI }
     let pieces = [];
     let movesHistory = [];
     let difficulty = null;
@@ -217,33 +218,34 @@
       diceRolled = false;
       currentTurn = 'human';
       
-      // For vertical movement, we use rows 0 (top) to 4 (bottom).
-      // All pieces start on the center row (row 2).
+      // For vertical movement, rows range from 0 (top) to 4 (bottom).
+      // All pieces start on the center row (row = 2).
       let startRow = 2;
       console.log("[DEBUG] startRow (center) =", startRow);
       
-      // We'll assign columns so that your blue pieces have room to move vertically.
-      // For humanSide "left": 
-      //   Blue (human) pieces start in columns 5–9.
-      //   Red (AI) pieces start in columns 0–4.
-      // For humanSide "right": swap these assignments.
+      // Set starting positions with a gap:
+      // For humanSide "left":
+      //   Blue (human) pieces will be on the left half of the board, so they can move left.
+      //   Let's assign blue pieces columns 0–4.
+      //   Red (AI) pieces will be on the right half, columns 7–11.
+      // For humanSide "right": swap the assignments.
       if (humanSide === 'left') {
-        for (let i = 0; i < 5; i++) {
-          pieces.push({ row: startRow, space: i + 5, color: 'blue', isAI: false });
-          console.log("[DEBUG] Added blue piece at row", startRow, "space =", i + 5);
-        }
-        for (let i = 0; i < 5; i++) {
-          pieces.push({ row: startRow, space: i, color: 'red', isAI: true });
-          console.log("[DEBUG] Added red piece at row", startRow, "space =", i);
-        }
-      } else { // humanSide === 'right'
         for (let i = 0; i < 5; i++) {
           pieces.push({ row: startRow, space: i, color: 'blue', isAI: false });
           console.log("[DEBUG] Added blue piece at row", startRow, "space =", i);
         }
         for (let i = 0; i < 5; i++) {
-          pieces.push({ row: startRow, space: i + 5, color: 'red', isAI: true });
-          console.log("[DEBUG] Added red piece at row", startRow, "space =", i + 5);
+          pieces.push({ row: startRow, space: i + 7, color: 'red', isAI: true });
+          console.log("[DEBUG] Added red piece at row", startRow, "space =", i + 7);
+        }
+      } else { // humanSide === 'right'
+        for (let i = 0; i < 5; i++) {
+          pieces.push({ row: startRow, space: i + 7, color: 'blue', isAI: false });
+          console.log("[DEBUG] Added blue piece at row", startRow, "space =", i + 7);
+        }
+        for (let i = 0; i < 5; i++) {
+          pieces.push({ row: startRow, space: i, color: 'red', isAI: true });
+          console.log("[DEBUG] Added red piece at row", startRow, "space =", i);
         }
       }
       gameState = "playing";
@@ -264,12 +266,12 @@
 
     // --- Draw Grid Lines ---
     function drawLines() {
-      const lineSpacing = GAME_HEIGHT / (LINE_COUNT + 1);
-      console.log("[DEBUG] drawLines: lineSpacing =", lineSpacing);
+      const rowSpacing = GAME_HEIGHT / (LINE_COUNT + 1);
+      console.log("[DEBUG] drawLines: rowSpacing =", rowSpacing);
       ctx.strokeStyle = "#000";
       ctx.lineWidth = 2;
       for (let i = 1; i <= LINE_COUNT; i++) {
-        const y = i * lineSpacing;
+        const y = i * rowSpacing;
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(GAME_WIDTH, y);
@@ -320,8 +322,8 @@
     console.log("[DEBUG] Dice roll event listener attached");
 
     // --- Handle Human Piece Movement (Vertical) ---
-    // For humanSide "left": blue pieces move upward (decrease row index) toward row 0.
-    // For humanSide "right": blue pieces move downward (increase row index) toward row LINE_COUNT-1.
+    // For humanSide "left": blue pieces move upward (decrease row) toward row 0.
+    // For humanSide "right": blue pieces move downward (increase row) toward row LINE_COUNT-1.
     canvas.addEventListener('mousedown', (e) => {
       console.log("[DEBUG] Canvas mousedown event triggered");
       if (gameState !== "playing" || !diceRolled || currentTurn !== 'human') {
@@ -375,7 +377,7 @@
         }
       }
   
-      // Check occupancy in the target cell (same column, new row).
+      // Check occupancy: the target (same column, new row) must be free.
       if (pieces.some(p => p !== currentPiece && p.space === currentPiece.space && p.row === newRow)) {
         console.warn("[DEBUG] Illegal move: space is occupied at row", newRow, "space =", currentPiece.space);
         addMoveToHistory("Illegal move: space is occupied.");
