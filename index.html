@@ -270,71 +270,63 @@
     // Movement: When you click a blue piece, it moves one row toward the target edge.
     // For humanSide "left": move upward (row - 1); for "right": move downward (row + 1).
     // In any moved row (other than the starting row) the piece's column is set to 6 (the yellow highlight).
-    canvas.addEventListener('mousedown', (e) => {
-      if (gameState !== 'playing' || currentTurn !== 'human' || !diceRolled) {
-        console.log("[DEBUG] Canvas click ignored; state not valid.");
-        return;
-      }
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
-      const mx = (e.clientX - rect.left) * scaleX;
-      const my = (e.clientY - rect.top) * scaleY;
-      console.log("[DEBUG] Mouse click at:", mx, my);
+canvas.addEventListener('mousedown', (e) => {
+  if (gameState !== 'playing' || currentTurn !== 'human' || !diceRolled) return;
 
-      const { spaceSpacing, rowSpacing } = getSpacings();
-      let selectedIndex = -1;
-      for (let i = 0; i < pieces.length; i++) {
-        const piece = pieces[i];
-        if (!piece.isAI && piece.color === 'blue') {
-          const { x, y } = lineSpaceToCoords(piece.row, piece.space);
-          const dx = mx - x;
-          const dy = my - y;
-          if (Math.sqrt(dx * dx + dy * dy) <= PIECE_RADIUS + HIT_TOLERANCE) {
-            selectedIndex = i;
-            console.log("[DEBUG] Found blue piece at index", i, "at (", x, ",", y,")");
-            break;
-          }
-        }
-      }
-      if (selectedIndex === -1) {
-        console.log("[DEBUG] No blue piece found near the click.");
-        return;
-      }
-      const p = pieces[selectedIndex];
-      console.log("[DEBUG] Selected blue piece:", p);
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top) * scaleY;
 
-      // Determine target row based on chosen side.
-      let targetRow;
-      if (humanSide === 'left') {
-        targetRow = p.row - 1;
-      } else {
-        targetRow = p.row + 1;
+  let selectedPiece = null;
+  for (let piece of pieces) {
+    if (!piece.isAI && piece.color === 'blue') {
+      const { x, y } = lineSpaceToCoords(piece.row, piece.space);
+      if (Math.hypot(mx - x, my - y) <= PIECE_RADIUS + HIT_TOLERANCE) {
+        selectedPiece = piece;
+        break;
       }
-      if (targetRow < 0 || targetRow > LINE_COUNT - 1) {
-        addMoveToHistory(`Illegal move: Target row ${targetRow} is out of bounds.`);
-        return;
-      }
-      // For rows other than the center row (row 2), only one piece may occupy the highlighted cell.
-if (pieces.some(pp => pp !== p && pp.row === targetRow && pp.space === p.space)) {
-  addMoveToHistory(`Illegal move: Target cell on row ${targetRow} is occupied.`);
-  alert("Illegal move: Target cell is already occupied."); // <-- Adds a visible alert message
+    }
+  }
+
+  if (!selectedPiece) return;
+
+  let movesRemaining = diceValue;
+  let { row, space } = selectedPiece;
+
+  while (movesRemaining > 0) {
+    if (row === 2 && space < TOTAL_COLUMNS - 1) space++;
+    else if (space === 0 && row > 0) row--;       // up left edge
+    else if (row === 0 && space < TOTAL_COLUMNS - 1) space++; // right across top row
+    else if (space === TOTAL_COLUMNS - 1 && row < LINE_COUNT - 1) row++; // down right edge
+    else if (row === LINE_COUNT - 1 && space > 0) space--;  // left bottom edge
+    else if (space === 0 && row < 2) row++;       // down to center
+    else {
+      alert('Cannot move further.');
+      return;
+    }
+    movesRemaining--;
+  }
+
+  if (pieces.some(p => p !== selectedPiece && p.row === row && p.space === space)) {
+  alert('Illegal move: Target cell occupied.');
   return;
-}
+  }
 
-      const oldRow = p.row;
-      p.row = targetRow;
-      // After moving, set its column to 6 (the yellow highlight)
-      p.space = (humanSide === 'left') ? -1 : 12;
-      addMoveToHistory(`Human moved piece from row ${oldRow} to row ${targetRow} (dice=${diceValue}).`);
+  selectedPiece.row = row;
+  selectedPiece.space = space;
+  addMoveToHistory(`Human moved piece to row ${row}, space ${space}.`);
 
-      diceRolled = false;
-      diceValue = 0;
-      diceResultSpan.textContent = "0";
-      currentTurn = 'ai';
-      redrawBoard();
-      setTimeout(aiTurn, 1000);
-    });
+  diceRolled = false;
+  diceValue = 0;
+  diceResultSpan.textContent = "0";
+  currentTurn = 'ai';
+  redrawBoard();
+  setTimeout(aiTurn, 1000);
+});
+
+
     console.log("[DEBUG] Canvas mousedown event listener attached");
 
     // --- AI Turn (Vertical Movement) ---
@@ -358,7 +350,7 @@ if (pieces.some(pp => pp !== p && pp.row === targetRow && pp.space === p.space))
           continue;
         }
         if (targetRow !== 2) {
-          if (pieces.some(pp => pp !== p && pp.row === targetRow && pp.space === 6)) {
+         if (pieces.some(pp => pp !== p && pp.row === targetRow && pp.space === 6)) {
             continue;
           }
         }
