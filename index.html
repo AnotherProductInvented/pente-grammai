@@ -391,6 +391,10 @@
       const { spaceSpacing, rowSpacing } = getSpacings();
       const x = (space + 1) * spaceSpacing;
       const y = (row + 1) * rowSpacing;
+
+      if (space === -1) return { x: PIECE_RADIUS, y };
+      if (space === 12) return { x: W - PIECE_RADIUS, y };
+
       return { x, y };
     }
 
