@@ -352,7 +352,10 @@ if (isOccupied) {
 const aiPieces = pieces.filter(p => p.isAI);
 let moved = false;
 
-for (let i = 0; i < aiPieces.length; i++) {
+const aiOrder = (humanSide === 'left') ? aiPieces : aiPieces.slice().reverse();
+for (let i = 0; i < aiOrder.length; i++) {
+  const p = aiOrder[i];
+
   const p = aiPieces[i];
   let targetRow = (humanSide === 'left') ? p.row + 1 : p.row - 1;
 
