@@ -18,11 +18,15 @@
       flex-direction: column;
       align-items: center;
       padding: 20px;
+      /* position: relative; // not needed unless you have other absolutely-positioned elements in body */
     }
-    /* Logo Styling */
+    /* Logo in bottom-right corner */
     #logo {
-      max-width: 200px;
-      margin-bottom: 20px;
+      position: fixed;
+      right: 10px;
+      bottom: 10px;
+      width: 80px; /* Adjust as needed */
+      z-index: 999;
     }
     h1 {
       margin: 1rem 0 0.5rem;
@@ -115,7 +119,7 @@
   </style>
 </head>
 <body>
-  <!-- Logo (adjust the source as needed) -->
+  <!-- Logo (only the positioning changed) -->
   <img src="logo.png" alt="Logo" id="logo">
   
   <h1>Another Product Invented<br>Pente Grammai</h1>
@@ -185,7 +189,7 @@
     const HIT_TOLERANCE = 10;  // Extra tolerance for click detection
   
     // Flag to select dice type (false = standard, true = custom)
-    let useCustomDice = false; // Custom dice remains available in code but not mentioned
+    let useCustomDice = false; // remains in code but not mentioned
   
     // Game state variables
     let pieces = []; // Each piece is { line, space, color, isAI }
@@ -226,20 +230,20 @@
   
       // Place 5 human pieces and 5 AI pieces on the center line (line index 2)
       if (humanSide === 'left') {
-        // Human pieces on left side (spaces 0 to 4)
+        // Human pieces on left side (spaces 0..4)
         for (let i = 0; i < 5; i++) {
           pieces.push({ line: 2, space: i, color: 'blue', isAI: false });
         }
-        // AI pieces on right side (spaces 6 down to 2)
+        // AI pieces on right side (spaces 6..2)
         for (let i = 0; i < 5; i++) {
           pieces.push({ line: 2, space: SPACES_PER_LINE - 1 - i, color: 'red', isAI: true });
         }
       } else {
-        // Human pieces on right side (spaces 6 down to 2)
+        // Human pieces on right side (spaces 6..2)
         for (let i = 0; i < 5; i++) {
           pieces.push({ line: 2, space: SPACES_PER_LINE - 1 - i, color: 'blue', isAI: false });
         }
-        // AI pieces on left side (spaces 0 to 4)
+        // AI pieces on left side (spaces 0..4)
         for (let i = 0; i < 5; i++) {
           pieces.push({ line: 2, space: i, color: 'red', isAI: true });
         }
