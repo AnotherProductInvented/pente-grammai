@@ -373,17 +373,6 @@ function aiTurn() {
 }
 
 
-    const occupied = pieces.some(pp => pp !== p && pp.row === targetRow && pp.space === targetSpace);
-    if (occupied) continue;
-
-    const oldRow = p.row;
-    const oldSpace = p.space;
-    p.row = targetRow;
-    p.space = targetSpace;
-
-    addMoveToHistory(`AI moved piece from row ${oldRow}, space ${oldSpace} to row ${targetRow}, space ${targetSpace}`);
-    moved = true;
-    break;
   }
 
   if (!moved) addMoveToHistory("AI could not move any piece.");
