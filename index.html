@@ -374,6 +374,8 @@ p.space = edgeSpace;
 
   const oldRow = p.row;
   p.row = targetRow;
+  p.space = (humanSide === 'left') ? TOTAL_COLUMNS - 1 : 0;
+
   
   addMoveToHistory(`AI moved piece from row ${oldRow} to row ${targetRow} (dice=${diceValue}).`);
   moved = true;
