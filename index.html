@@ -316,25 +316,28 @@ if (humanSide === 'left') {
       let targetRow;
       if (humanSide === 'left') {
         targetRow = p.row - 1;
-      } else {
-        targetRow = p.row + 1;
-      }
-      if (targetRow < 0 || targetRow >= LINE_COUNT) {
-        addMoveToHistory(`Illegal move: Target row ${targetRow} is out of bounds.`);
-        return;
-      }
-      // For rows other than the center row (row 2), only one piece may occupy the highlighted cell (col 6).
-if (targetRow !== 2) {
-  if (pieces.some(pp => pp !== p && pp.row === targetRow && pp.space === 6)) {
-    showMessage("⚠️ Space is occupied");
-    return;
-  }
+} else {
+  targetRow = p.row + 1;
 }
+
+if (targetRow < 0 || targetRow >= LINE_COUNT) {
+
+  addMoveToHistory(`Illegal move: Target row ${targetRow} is out of bounds.`);
+  return;
+}
+
+const edgeSpace = (humanSide === 'left') ? 0 : TOTAL_COLUMNS - 1;
+const isOccupied = pieces.some(pp => pp !== p && pp.row === targetRow && pp.space === edgeSpace);
+if (isOccupied) {
+  showMessage("⚠️ Space is occupied");
+  return;
+}
+
 
       const oldRow = p.row;
       p.row = targetRow;
       // Set piece's space to 6 (the yellow highlight)
-      p.space = (humanSide === 'left') ? 0 : TOTAL_COLUMNS - 1;
+      p.space = edgeSpace;
 
       addMoveToHistory(`Human moved piece from row ${oldRow} to row ${targetRow} (dice=${diceValue}).`);
 
@@ -362,9 +365,11 @@ for (let i = 0; i < aiPieces.length; i++) {
 
   if (targetRow < 0 || targetRow >= LINE_COUNT) continue;
 
-  if (targetRow !== 2) {
-    if (pieces.some(pp => pp !== p && pp.row === targetRow && pp.space === 6)) continue;
-  }
+const edgeSpace = (humanSide === 'left') ? 0 : TOTAL_COLUMNS - 1;
+const isOccupied = pieces.some(pp => pp !== p && pp.row === targetRow && pp.space === edgeSpace);
+if (isOccupied) continue;
+p.space = edgeSpace;
+
 
   const oldRow = p.row;
   p.row = targetRow;
