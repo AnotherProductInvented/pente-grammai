@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Another Product Invented – Pente Grammai</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pente Grammai – Another Product Invented</title>
   <style>
     /* Global Reset */
     * {
@@ -18,11 +18,15 @@
       flex-direction: column;
       align-items: center;
       padding: 20px;
+      position: relative; /* So logo can be fixed to the corner */
     }
-    /* Logo Styling */
+    /* Logo in bottom-right corner */
     #logo {
-      max-width: 200px;
-      margin-bottom: 20px;
+      position: fixed;
+      right: 10px;
+      bottom: 10px;
+      width: 80px;
+      z-index: 999;
     }
     h1 {
       margin: 1rem 0 0.5rem;
@@ -43,42 +47,6 @@
       display: block;
       width: 100%;
       height: 100%;
-    }
-    /* Overlay Screens */
-    .overlayScreen {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(255,255,255,0.95);
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 20px;
-      z-index: 10;
-    }
-    button {
-      font-size: 18px;
-      padding: 10px 20px;
-      margin: 5px;
-      cursor: pointer;
-    }
-    /* Difficulty & Side Container */
-    #difficultySideContainer {
-      display: flex;
-      gap: 20px;
-      flex-wrap: wrap;
-      justify-content: center;
-      margin-top: 10px;
-    }
-    #difficultyContainer,
-    #sideContainer {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
     }
     /* Dice & Moves Area */
     #diceArea {
@@ -115,53 +83,17 @@
   </style>
 </head>
 <body>
-  <!-- Logo (adjust the source as needed) -->
-  <img src="logo.png" alt="Logo" id="logo">
-  
-  <h1>Another Product Invented<br>Pente Grammai</h1>
-  
-  <!-- Game Container -->
+  <!-- Logo in bottom-right corner (change src as needed) -->
+  <img id="logo" src="logo.png" alt="Logo" />
+
+  <h1>Pente Grammai</h1>
+
+  <!-- Main Board Container -->
   <div id="gameContainer">
     <canvas id="gameCanvas" width="500" height="500"></canvas>
-    
-    <!-- Overlay Screens -->
-    <div id="menuScreen" class="overlayScreen" style="display:flex;">
-      <button id="newGameBtn">New Game</button>
-      <button id="instructionsBtn">Instructions</button>
-    </div>
-    <div id="instructionsScreen" class="overlayScreen">
-      <h2>Instructions</h2>
-      <p>1) The game supports a standard dice roll.</p>
-      <p>2) I have 5 pieces and you have 5 pieces, all initially placed on the center line.</p>
-      <p>3) Roll the dice and click your piece to attempt a move.</p>
-      <p>4) The objective is to move your pieces from the center line to the opposite center line, following an anti‑clockwise direction.</p>
-      <p>5) Occupied spaces cannot be landed on. If you attempt to move a piece onto an occupied space, the move is illegal.</p>
-      <p>Press [M] to return to the Main Menu.</p>
-    </div>
-    <div id="difficultyScreen" class="overlayScreen">
-      <h2>New Game</h2>
-      <div id="difficultySideContainer">
-        <div id="difficultyContainer">
-          <p><strong>Difficulty</strong></p>
-          <button id="easyBtn">Easy</button>
-          <button id="mediumBtn">Medium</button>
-          <button id="hardBtn">Hard</button>
-        </div>
-        <div id="sideContainer">
-          <p><strong>Side</strong></p>
-          <button id="leftSideBtn">Left</button>
-          <button id="rightSideBtn">Right</button>
-        </div>
-      </div>
-    </div>
-    <div id="gameOverScreen" class="overlayScreen">
-      <h2 id="gameOverText"></h2>
-      <button id="gameOverNewGameBtn">New Game</button>
-      <p>Press [M] to return to the Main Menu.</p>
-    </div>
   </div>
-  
-  <!-- Dice and Past Moves Area -->
+
+  <!-- Dice and Past Moves -->
   <div id="diceArea">
     <div>
       Dice: <span id="diceResult">0</span>
@@ -171,96 +103,66 @@
       <ul id="movesList"></ul>
     </div>
   </div>
-  
+
   <script>
     'use strict';
-    // Constants and Game Settings
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
+
+    // Canvas and drawing context
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Board config
     const GAME_WIDTH = canvas.width;
     const GAME_HEIGHT = canvas.height;
-    const LINE_COUNT = 5;
-    const SPACES_PER_LINE = 7;
+    const LINE_COUNT = 5;        // We'll draw 5 horizontal lines
+    const SPACES_PER_LINE = 7;   // Each line has 7 spaces
     const PIECE_RADIUS = 15;
-    const HIT_TOLERANCE = 10;  // Extra tolerance for click detection
-  
-    // Flag to select dice type (false = standard, true = custom)
-    let useCustomDice = false; // Custom dice remains available in code but not mentioned
-  
-    // Game state variables
-    let pieces = []; // Each piece is { line, space, color, isAI }
+    const HIT_TOLERANCE = 10;    // Extra click area around a piece
+
+    // Game state
+    let pieces = [];     // Each piece is { line, space, color, isAI }
     let movesHistory = [];
-    let difficulty = null;
-    let humanSide = null; // 'left' or 'right'
     let currentTurn = 'human';
     let diceValue = 0;
     let diceRolled = false;
-    let gameState = "menu";
-  
-    // DOM Elements for overlays and controls
-    const menuScreen = document.getElementById("menuScreen");
-    const instructionsScreen = document.getElementById("instructionsScreen");
-    const difficultyScreen = document.getElementById("difficultyScreen");
-    const gameOverScreen = document.getElementById("gameOverScreen");
-    const gameOverText = document.getElementById("gameOverText");
-    const diceResultSpan = document.getElementById("diceResult");
-    const movesList = document.getElementById("movesList");
-  
-    // Show one overlay screen and hide others
-    const showOverlay = (overlay) => {
-      [menuScreen, instructionsScreen, difficultyScreen, gameOverScreen].forEach(screen => {
-        screen.style.display = "none";
-      });
-      if (overlay) overlay.style.display = "flex";
-    };
-  
-    // Start or restart the game
-    const startGame = () => {
+    let gameState = 'playing';  // We auto-start, so it's "playing" immediately.
+
+    // DOM elements
+    const diceResultSpan = document.getElementById('diceResult');
+    const movesList = document.getElementById('movesList');
+
+    // By default, let's place human on the left, AI on the right
+    const humanSide = 'left';
+    const difficulty = 'easy'; // Not heavily used in logic, but stored
+
+    // ----------------------------------------------------------------
+    // 1) Initialization: Place 5 pieces for each side
+    // ----------------------------------------------------------------
+    function initPieces() {
       pieces = [];
-      movesHistory = [];
-      movesList.innerHTML = "";
-      diceValue = 0;
-      diceResultSpan.textContent = "0";
-      diceRolled = false;
-      currentTurn = 'human';
-  
-      // Place 5 human pieces and 5 AI pieces on the center line (line index 2)
-      if (humanSide === 'left') {
-        // Human pieces on left side (spaces 0 to 4)
-        for (let i = 0; i < 5; i++) {
-          pieces.push({ line: 2, space: i, color: 'blue', isAI: false });
-        }
-        // AI pieces on right side (spaces 6 down to 2)
-        for (let i = 0; i < 5; i++) {
-          pieces.push({ line: 2, space: SPACES_PER_LINE - 1 - i, color: 'red', isAI: true });
-        }
-      } else {
-        // Human pieces on right side (spaces 6 down to 2)
-        for (let i = 0; i < 5; i++) {
-          pieces.push({ line: 2, space: SPACES_PER_LINE - 1 - i, color: 'blue', isAI: false });
-        }
-        // AI pieces on left side (spaces 0 to 4)
-        for (let i = 0; i < 5; i++) {
-          pieces.push({ line: 2, space: i, color: 'red', isAI: true });
-        }
+      // If human is on the left:
+      for (let i = 0; i < 5; i++) {
+        // Human: line=2, spaces=0..4
+        pieces.push({ line: 2, space: i, color: 'blue', isAI: false });
       }
-  
-      gameState = "playing";
-      showOverlay(null);
-      redrawBoard();
-    };
-  
-    // Redraw the board and pieces
-    const redrawBoard = () => {
+      // AI: line=2, spaces=6..2
+      for (let i = 0; i < 5; i++) {
+        pieces.push({ line: 2, space: SPACES_PER_LINE - 1 - i, color: 'red', isAI: true });
+      }
+    }
+
+    // ----------------------------------------------------------------
+    // 2) Drawing
+    // ----------------------------------------------------------------
+    function redrawBoard() {
       ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
       drawLines();
       drawPieces();
-    };
-  
-    // Draw horizontal lines
-    const drawLines = () => {
+    }
+
+    function drawLines() {
       const lineSpacing = GAME_HEIGHT / (LINE_COUNT + 1);
-      ctx.strokeStyle = "#000";
+      ctx.strokeStyle = '#000';
       ctx.lineWidth = 2;
       for (let i = 1; i <= LINE_COUNT; i++) {
         const y = i * lineSpacing;
@@ -269,13 +171,12 @@
         ctx.lineTo(GAME_WIDTH, y);
         ctx.stroke();
       }
-    };
-  
-    // Draw all pieces
-    const drawPieces = () => {
+    }
+
+    function drawPieces() {
       const lineSpacing = GAME_HEIGHT / (LINE_COUNT + 1);
       const spaceSpacing = GAME_WIDTH / (SPACES_PER_LINE + 1);
-  
+
       pieces.forEach(piece => {
         const y = (piece.line + 1) * lineSpacing;
         const x = (piece.space + 1) * spaceSpacing;
@@ -284,164 +185,150 @@
         ctx.arc(x, y, PIECE_RADIUS, 0, Math.PI * 2);
         ctx.fill();
       });
-    };
-  
-    // Custom dice roll (remains in code but not visible)
-    const customDiceRoll = () => {
-      return Math.floor(Math.random() * 6) + 1;
-    };
-  
-    // Handle clicking on a human piece to move it
+    }
+
+    // ----------------------------------------------------------------
+    // 3) Dice Logic
+    // ----------------------------------------------------------------
+    document.getElementById('diceRollBtn').addEventListener('click', () => {
+      // Only allow rolling if game is in progress, it's human's turn, and we haven't rolled yet
+      if (gameState !== 'playing' || currentTurn !== 'human' || diceRolled) {
+        console.warn('Cannot roll dice right now.');
+        return;
+      }
+      // Standard dice roll
+      diceValue = Math.floor(Math.random() * 6) + 1;
+      diceRolled = true;
+      diceResultSpan.textContent = diceValue;
+    });
+
+    // ----------------------------------------------------------------
+    // 4) Clicking on a piece to move
+    // ----------------------------------------------------------------
     canvas.addEventListener('mousedown', (e) => {
-      if (gameState !== "playing" || !diceRolled || currentTurn !== 'human') return;
-  
+      if (gameState !== 'playing' || !diceRolled || currentTurn !== 'human') {
+        return;
+      }
+
       const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
+
       const lineSpacing = GAME_HEIGHT / (LINE_COUNT + 1);
       const spaceSpacing = GAME_WIDTH / (SPACES_PER_LINE + 1);
-  
-      // Find a human piece near the click
+
+      // Find which human piece was clicked
       let selectedIndex = -1;
       for (let i = 0; i < pieces.length; i++) {
-        const piece = pieces[i];
-        if (!piece.isAI) {
-          const x = (piece.space + 1) * spaceSpacing;
-          const y = (piece.line + 1) * lineSpacing;
-          const dx = mouseX - x;
-          const dy = mouseY - y;
-          if (Math.sqrt(dx * dx + dy * dy) <= PIECE_RADIUS + HIT_TOLERANCE) {
+        const p = pieces[i];
+        if (!p.isAI) {
+          const px = (p.space + 1) * spaceSpacing;
+          const py = (p.line + 1) * lineSpacing;
+          const dx = mouseX - px;
+          const dy = mouseY - py;
+          if (Math.sqrt(dx * dx + dy * dy) <= (PIECE_RADIUS + HIT_TOLERANCE)) {
             selectedIndex = i;
             break;
           }
         }
       }
-  
       if (selectedIndex === -1) {
-        console.warn("No piece found near the click.");
+        console.warn('No piece found near the click.');
         return;
       }
-  
-      // Move the selected piece by the dice value according to player's side
-      const currentPiece = pieces[selectedIndex];
-      let newSpace = (humanSide === 'left') 
-                     ? currentPiece.space + diceValue 
-                     : currentPiece.space - diceValue;
-  
-      // Check for bounds or if destination is occupied
+
+      // Attempt to move the piece
+      const piece = pieces[selectedIndex];
+      // If human side is left, move right. If side is right, move left.
+      // We forced side=left above, so:
+      const newSpace = piece.space + diceValue; // moving to the right
+
+      // Check bounds
       if (newSpace < 0 || newSpace >= SPACES_PER_LINE) {
-        console.warn("Illegal move: out of bounds.");
-        addMoveToHistory("Illegal move: out of bounds.");
+        addMoveToHistory('Illegal move: out of bounds.');
+        console.warn('Illegal move: out of bounds.');
         return;
       }
-      if (pieces.some(p => p.line === currentPiece.line && p.space === newSpace)) {
-        console.warn("Illegal move: space is occupied.");
-        addMoveToHistory("Illegal move: space is occupied.");
+      // Check occupancy
+      if (pieces.some(pp => pp.line === piece.line && pp.space === newSpace)) {
+        addMoveToHistory('Illegal move: space is occupied.');
+        console.warn('Illegal move: space is occupied.');
         return;
       }
-  
-      const previousSpace = currentPiece.space;
-      currentPiece.space = newSpace;
-      addMoveToHistory(`Human: Moved from space ${previousSpace} to ${newSpace} on line ${currentPiece.line} (dice: ${diceValue})`);
-  
-      // Reset dice and switch turn to AI
-      diceRolled = false;
+
+      // Move piece
+      const oldSpace = piece.space;
+      piece.space = newSpace;
+      addMoveToHistory(`Human: Moved from space ${oldSpace} to ${newSpace} (dice=${diceValue})`);
+
+      // Reset dice & pass turn to AI
       diceValue = 0;
-      diceResultSpan.textContent = "0";
+      diceRolled = false;
+      diceResultSpan.textContent = '0';
       currentTurn = 'ai';
       redrawBoard();
       setTimeout(aiTurn, 1200);
     });
-  
-    // AI turn logic
-    const aiTurn = () => {
-      if (!pieces.some(p => p.isAI) || difficulty === "none") return;
-  
-      // AI uses a standard dice roll
+
+    // ----------------------------------------------------------------
+    // 5) AI Turn
+    // ----------------------------------------------------------------
+    function aiTurn() {
+      if (gameState !== 'playing') return;
+
+      // AI rolls
       diceValue = Math.floor(Math.random() * 6) + 1;
       diceResultSpan.textContent = diceValue;
-  
+
       const aiPieces = pieces.filter(p => p.isAI);
-  
-      // Try to move an AI piece
-      aiPieces.some(piece => {
-        const oldSpace = piece.space;
-        const newSpace = humanSide === 'left' ? oldSpace - diceValue : oldSpace + diceValue;
-        if (newSpace >= 0 && newSpace < SPACES_PER_LINE && !pieces.some(p => p.line === piece.line && p.space === newSpace)) {
-          piece.space = newSpace;
-          addMoveToHistory(`AI: Moved from space ${oldSpace} to ${newSpace} on line ${piece.line} (dice: ${diceValue})`);
-          return true;
+      // Simple AI: pick the first piece that can move
+      for (let i = 0; i < aiPieces.length; i++) {
+        const ap = aiPieces[i];
+        // If human is on the left, AI is on the right => it moves left
+        const newSpace = ap.space - diceValue;
+        if (newSpace >= 0 && newSpace < SPACES_PER_LINE) {
+          // Check occupancy
+          if (!pieces.some(pp => pp.line === ap.line && pp.space === newSpace)) {
+            // Move
+            const oldSpace = ap.space;
+            ap.space = newSpace;
+            addMoveToHistory(`AI: Moved from space ${oldSpace} to ${newSpace} (dice=${diceValue})`);
+            break;
+          }
         }
-        return false;
-      });
-  
-      // Reset dice and switch turn back to human
+      }
+
       diceValue = 0;
-      diceResultSpan.textContent = "0";
+      diceResultSpan.textContent = '0';
       diceRolled = false;
       currentTurn = 'human';
       redrawBoard();
-    };
-  
-    // Dice roll for human turn
-    document.getElementById('diceRollBtn').addEventListener('click', () => {
-      if (gameState !== "playing" || currentTurn !== 'human' || diceRolled) {
-        console.warn("Cannot roll dice right now.");
-        return;
-      }
-      diceValue = useCustomDice ? customDiceRoll() : (Math.floor(Math.random() * 6) + 1);
-      diceRolled = true;
-      diceResultSpan.textContent = diceValue;
-    });
-  
-    // Append move messages to the history log
-    const addMoveToHistory = (message) => {
-      movesHistory.push(message);
-      const listItem = document.createElement('li');
-      listItem.textContent = message;
-      movesList.appendChild(listItem);
+    }
+
+    // ----------------------------------------------------------------
+    // 6) Move History
+    // ----------------------------------------------------------------
+    function addMoveToHistory(msg) {
+      movesHistory.push(msg);
+      const li = document.createElement('li');
+      li.textContent = msg;
+      movesList.appendChild(li);
       movesList.scrollTop = movesList.scrollHeight;
-    };
-  
-    // Overlay button event listeners
-    document.getElementById('newGameBtn').addEventListener('click', () => showOverlay(difficultyScreen));
-    document.getElementById('instructionsBtn').addEventListener('click', () => showOverlay(instructionsScreen));
-  
-    // Difficulty selection buttons
-    document.getElementById('easyBtn').addEventListener('click', () => { difficulty = 'easy'; });
-    document.getElementById('mediumBtn').addEventListener('click', () => { difficulty = 'medium'; });
-    document.getElementById('hardBtn').addEventListener('click', () => { difficulty = 'hard'; });
-  
-    // Side selection buttons
-    document.getElementById('leftSideBtn').addEventListener('click', () => {
-      humanSide = 'left';
+    }
+
+    // ----------------------------------------------------------------
+    // 7) Initialize and run
+    // ----------------------------------------------------------------
+    function startGame() {
+      // Create 5 blue (human) and 5 red (AI) pieces
+      initPieces();
+      redrawBoard();
+    }
+
+    // Immediately start the game on page load
+    window.addEventListener('load', () => {
       startGame();
     });
-    document.getElementById('rightSideBtn').addEventListener('click', () => {
-      humanSide = 'right';
-      startGame();
-    });
-  
-    // Game Over new game button
-    document.getElementById('gameOverNewGameBtn').addEventListener('click', () => showOverlay(menuScreen));
-  
-    // Keyboard shortcut: Press [M] to return to Main Menu
-    document.addEventListener('keydown', (e) => {
-      if (e.key.toLowerCase() === 'm') showOverlay(menuScreen);
-    });
-  
-    // Initial setup: show the menu and draw the board
-    showOverlay(menuScreen);
-    redrawBoard();
-  
-    // Main animation loop (can be extended for win-checks and animations)
-    const gameLoop = () => {
-      if (gameState === 'playing') {
-        // Placeholder for additional game logic
-      }
-      requestAnimationFrame(gameLoop);
-    };
-    requestAnimationFrame(gameLoop);
   </script>
 </body>
 </html>
