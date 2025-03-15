@@ -370,9 +370,6 @@ function aiTurn() {
   addMoveToHistory(`AI moved piece from row ${oldRow}, space ${oldSpace} to row ${tempRow}, space ${tempSpace}`);
   moved = true;
   break;
-}
-
-
   }
 
   if (!moved) addMoveToHistory("AI could not move any piece.");
