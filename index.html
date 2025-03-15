@@ -172,6 +172,8 @@
 
     // --- Game State ---
     let pieces = [];
+    let movesHistory = [];
+
     let currentTurn = 'human';
     let gameState = 'menu';
     let diceRolled = false;
@@ -209,6 +211,8 @@
     console.log("[DEBUG] showOverlay defined");
 
     // --- New Game Setup (startGame) ---
+    
+    let diceValue = 0;
     function startGame() {
       console.log("[DEBUG] startGame called with difficulty =", difficulty, "humanSide =", humanSide);
       pieces = [];
