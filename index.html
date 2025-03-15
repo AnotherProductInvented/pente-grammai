@@ -291,27 +291,7 @@ while (stepsRemaining > 0) {
     selected.row = (humanSide === 'left') ? 0 : LINE_COUNT - 1;
     selected.space = (humanSide === 'left') ? 0 : TOTAL_COLUMNS - 1;
     selected.phase = 'edge';
-  } else if (selected.phase === 'edge') {
-    selected.space += (humanSide === 'left') ? 1 : -1;
-    if ((humanSide === 'left' && selected.space >= TOTAL_COLUMNS - 1) ||
-        (humanSide === 'right' && selected.space <= 0)) {
-      selected.phase = 'corner';
-    }
-  } else if (selected.phase === 'corner') {
-    selected.row += (humanSide === 'left') ? 1 : -1;
-    if (selected.row === 2) {
-      selected.phase = 'side';
-    }
-  } else if (selected.phase === 'side') {
-    selected.space += (humanSide === 'left') ? -1 : 1;
-    if ((humanSide === 'left' && selected.space <= 0) ||
-        (humanSide === 'right' && selected.space >= TOTAL_COLUMNS - 1)) {
-      selected.phase = 'entry';
-    }
-  } else if (selected.phase === 'entry') {
-    showMessage("🎉 Piece completed its journey!");
-    break;
-  }
+ 
   stepsRemaining--;
 }
 else if (selected.phase === 'edge') {
