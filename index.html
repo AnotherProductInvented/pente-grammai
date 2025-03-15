@@ -96,7 +96,7 @@
   </style>
 </head>
 <body>
-  <!-- Logo (adjust the source as needed) -->
+  <!-- Logo (replace "logo.png" with your logo source) -->
   <img src="logo.png" alt="Logo" id="logo">
   <h1>Another Product Invented<br>Pente Grammai</h1>
   
@@ -164,7 +164,7 @@
     const LINE_COUNT = 5; // Rows 0 (top) to 4 (bottom)
     const PIECE_RADIUS = 15;
     const HIT_TOLERANCE = 10;
-    // Use 12 columns (0 to 11) so edges (0 and 11) are free.
+    // Use 12 columns (0 to 11) so that the extreme edges (0 and 11) are free.
     const TOTAL_COLUMNS = 12;
     console.log("[DEBUG] Board constants: GAME_WIDTH =", GAME_WIDTH, "GAME_HEIGHT =", GAME_HEIGHT, "LINE_COUNT =", LINE_COUNT, "TOTAL_COLUMNS =", TOTAL_COLUMNS);
 
@@ -222,19 +222,10 @@
       let startRow = 2;
       console.log("[DEBUG] startRow (center) =", startRow);
       
-      // Starting positions:
-      // If humanSide is "left": place blue (human) pieces on the left half (columns 1–5) and red (AI) on the right half (columns 7–11).
-      // If humanSide is "right": swap the assignments.
+      // Set starting positions so that edges are free:
+      // If humanSide is "left": blue (human) pieces in columns 7–11; red (AI) pieces in columns 1–5.
+      // If humanSide is "right": blue pieces in columns 1–5; red pieces in columns 7–11.
       if (humanSide === 'left') {
-        for (let i = 0; i < 5; i++) {
-          pieces.push({ row: startRow, space: i + 1, color: 'blue', isAI: false });
-          console.log("[DEBUG] Added blue piece at row", startRow, "space =", i + 1);
-        }
-        for (let i = 0; i < 5; i++) {
-          pieces.push({ row: startRow, space: i + 7, color: 'red', isAI: true });
-          console.log("[DEBUG] Added red piece at row", startRow, "space =", i + 7);
-        }
-      } else { // humanSide === 'right'
         for (let i = 0; i < 5; i++) {
           pieces.push({ row: startRow, space: i + 7, color: 'blue', isAI: false });
           console.log("[DEBUG] Added blue piece at row", startRow, "space =", i + 7);
@@ -242,6 +233,15 @@
         for (let i = 0; i < 5; i++) {
           pieces.push({ row: startRow, space: i + 1, color: 'red', isAI: true });
           console.log("[DEBUG] Added red piece at row", startRow, "space =", i + 1);
+        }
+      } else { // humanSide === 'right'
+        for (let i = 0; i < 5; i++) {
+          pieces.push({ row: startRow, space: i + 1, color: 'blue', isAI: false });
+          console.log("[DEBUG] Added blue piece at row", startRow, "space =", i + 1);
+        }
+        for (let i = 0; i < 5; i++) {
+          pieces.push({ row: startRow, space: i + 7, color: 'red', isAI: true });
+          console.log("[DEBUG] Added red piece at row", startRow, "space =", i + 7);
         }
       }
       gameState = "playing";
@@ -318,23 +318,26 @@
     console.log("[DEBUG] Dice roll event listener attached");
 
     // --- Handle Human Piece Movement (Vertical) ---
-    // We'll move pieces vertically from the center row toward the edge.
-    // For humanSide "left": blue pieces move upward (row decreases) toward row 0.
-    // For humanSide "right": blue pieces move downward (row increases) toward row LINE_COUNT-1.
+    // For humanSide "left": blue pieces move upward (decrease row index) toward row 0.
+    // For humanSide "right": blue pieces move downward (increase row index) toward row LINE_COUNT-1.
     canvas.addEventListener('mousedown', (e) => {
       console.log("[DEBUG] Canvas mousedown event triggered");
       if (gameState !== "playing" || !diceRolled || currentTurn !== 'human') {
         console.log("[DEBUG] Ignoring click: gameState =", gameState, "diceRolled =", diceRolled, "currentTurn =", currentTurn);
         return;
       }
+      // Get proper mouse coordinates using scaling:
       const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-      console.log("[DEBUG] Mouse click at (" + mouseX + ", " + mouseY + ")");
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const mouseX = (e.clientX - rect.left) * scaleX;
+      const mouseY = (e.clientY - rect.top) * scaleY;
+      console.log("[DEBUG] Mouse click at (", mouseX, ",", mouseY, ")");
+      
       const spaceSpacing = GAME_WIDTH / (TOTAL_COLUMNS + 1);
       const rowSpacing = GAME_HEIGHT / (LINE_COUNT + 1);
   
-      // Find a human (blue) piece near the click.
+      // Find the human (blue) piece near the click.
       let selectedIndex = -1;
       for (let i = 0; i < pieces.length; i++) {
         const piece = pieces[i];
@@ -374,7 +377,7 @@
         }
       }
   
-      // Check occupancy (target cell: same column, new row).
+      // Check occupancy in the target cell (same column, new row).
       if (pieces.some(p => p !== currentPiece && p.space === currentPiece.space && p.row === newRow)) {
         console.warn("[DEBUG] Illegal move: space is occupied at row", newRow, "space =", currentPiece.space);
         addMoveToHistory("Illegal move: space is occupied.");
