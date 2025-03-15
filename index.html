@@ -316,12 +316,12 @@
         return;
       }
       // For rows other than the center row (row 2), only one piece may occupy the highlighted cell.
-      if (targetRow !== 2) {
-        if (pieces.some(pp => pp !== p && pp.row === targetRow && pp.space === 6)) {
-          addMoveToHistory(`Illegal move: The highlighted cell on row ${targetRow} is already occupied.`);
-          return;
-        }
-      }
+if (pieces.some(pp => pp !== p && pp.row === targetRow && pp.space === p.space)) {
+  addMoveToHistory(`Illegal move: Target cell on row ${targetRow} is occupied.`);
+  alert("Illegal move: Target cell is already occupied."); // <-- Adds a visible alert message
+  return;
+}
+
       const oldRow = p.row;
       p.row = targetRow;
       // After moving, set its column to 6 (the yellow highlight)
