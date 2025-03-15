@@ -24,7 +24,7 @@
       position: fixed;
       right: 10px;
       bottom: 10px;
-      width: 80px; /* Adjust size as needed */
+      width: 80px;
       z-index: 999;
     }
     h1 {
@@ -118,7 +118,7 @@
   </style>
 </head>
 <body>
-  <!-- Logo (replace "logo.png" with your logo source) -->
+  <!-- Logo (replace "logo.png" with your actual logo source) -->
   <img src="logo.png" alt="Logo" id="logo">
   
   <h1>Another Product Invented<br>Pente Grammai</h1>
@@ -177,7 +177,6 @@
   
   <script>
     'use strict';
-    // --- DEBUG: Starting Script ---
     console.log("[DEBUG] Script started");
 
     // --- Constants and Board Setup ---
@@ -185,18 +184,18 @@
     const ctx = canvas.getContext("2d");
     const GAME_WIDTH = canvas.width;
     const GAME_HEIGHT = canvas.height;
-    const LINE_COUNT = 5; // We have 5 horizontal lines; center line is index 2.
+    const LINE_COUNT = 5; // Lines indexed 0 to 4; center is index 2.
     const PIECE_RADIUS = 15;
-    const HIT_TOLERANCE = 10; // Extra tolerance for click detection
-    const TOTAL_SPACES = 10;  // Total columns available on the center line
-    console.log("[DEBUG] Constants defined: GAME_WIDTH =", GAME_WIDTH, "GAME_HEIGHT =", GAME_HEIGHT, "LINE_COUNT =", LINE_COUNT, "TOTAL_SPACES =", TOTAL_SPACES);
+    const HIT_TOLERANCE = 10; // Extra tolerance for detecting clicks.
+    console.log("[DEBUG] Constants defined: GAME_WIDTH =", GAME_WIDTH, "GAME_HEIGHT =", GAME_HEIGHT, "LINE_COUNT =", LINE_COUNT);
 
     // --- Dice Flag ---
     let useCustomDice = false;
-    console.log("[DEBUG] useCustomDice set to", useCustomDice);
+    console.log("[DEBUG] useCustomDice =", useCustomDice);
 
     // --- Game State Variables ---
-    let pieces = [];  // Each piece: { line, space, color, isAI }
+    // Each piece: { line, space, color, isAI }
+    let pieces = [];
     let movesHistory = [];
     let difficulty = null;
     let humanSide = null; // 'left' or 'right'
@@ -204,7 +203,7 @@
     let diceValue = 0;
     let diceRolled = false;
     let gameState = "menu";
-    console.log("[DEBUG] Game state initialized");
+    console.log("[DEBUG] Game state variables initialized");
 
     // --- DOM Elements ---
     const menuScreen = document.getElementById("menuScreen");
@@ -238,8 +237,8 @@
       currentTurn = 'human';
       console.log("[DEBUG] Game state reset");
 
-      // Place 5 blue (human) and 5 red (AI) pieces on the center line (line index 2)
-      // Use distinct column positions (0-4 for one side, 5-9 for the other)
+      // Place 5 blue (human) and 5 red (AI) pieces on the center line (line index 2).
+      // We'll use 10 columns (space indices 0 to 9) so pieces don't overlap.
       if (humanSide === 'left') {
         for (let i = 0; i < 5; i++) {
           pieces.push({ line: 2, space: i, color: 'blue', isAI: false });
@@ -294,7 +293,7 @@
 
     // --- Draw Pieces ---
     function drawPieces() {
-      const spaceSpacing = GAME_WIDTH / (TOTAL_SPACES + 1);
+      const spaceSpacing = GAME_WIDTH / (10 + 1); // 10 columns: indices 0 to 9
       const lineSpacing = GAME_HEIGHT / (LINE_COUNT + 1);
       console.log("[DEBUG] drawPieces: spaceSpacing =", spaceSpacing, "lineSpacing =", lineSpacing);
       pieces.forEach((piece, index) => {
@@ -332,7 +331,7 @@
     });
     console.log("[DEBUG] Dice roll event listener attached");
 
-    // --- Handle Human Piece Movement (Vertical) ---
+    // --- Handle Human Piece Movement (Vertical with Clamping) ---
     canvas.addEventListener('mousedown', (e) => {
       console.log("[DEBUG] Canvas mousedown event triggered");
       if (gameState !== "playing" || !diceRolled || currentTurn !== 'human') {
@@ -344,7 +343,7 @@
       const mouseY = e.clientY - rect.top;
       console.log("[DEBUG] Mouse click at (" + mouseX + ", " + mouseY + ")");
       const lineSpacing = GAME_HEIGHT / (LINE_COUNT + 1);
-      const spaceSpacing = GAME_WIDTH / (TOTAL_SPACES + 1);
+      const spaceSpacing = GAME_WIDTH / (10 + 1);
   
       // Find the human (blue) piece near the click.
       let selectedIndex = -1;
@@ -371,20 +370,26 @@
       console.log("[DEBUG] Selected piece:", currentPiece);
       let newLine;
       if (humanSide === 'left') {
+        // For left side, blue pieces move upward.
         newLine = currentPiece.line - diceValue;
-        console.log("[DEBUG] Human side left: moving upward. New line =", newLine);
+        console.log("[DEBUG] Human side left: calculated newLine =", newLine);
+        // Clamp to top edge (line index 0)
+        if (newLine < 0) {
+          console.log("[DEBUG] Clamping newLine to 0");
+          newLine = 0;
+        }
       } else {
+        // For right side, blue pieces move downward.
         newLine = currentPiece.line + diceValue;
-        console.log("[DEBUG] Human side right: moving downward. New line =", newLine);
+        console.log("[DEBUG] Human side right: calculated newLine =", newLine);
+        // Clamp to bottom edge (line index LINE_COUNT - 1)
+        if (newLine >= LINE_COUNT) {
+          console.log("[DEBUG] Clamping newLine to", LINE_COUNT - 1);
+          newLine = LINE_COUNT - 1;
+        }
       }
   
-      // Validate move boundaries (valid line indices: 0 to LINE_COUNT-1)
-      if (newLine < 0 || newLine >= LINE_COUNT) {
-        console.warn("[DEBUG] Illegal move: out of bounds. Attempted newLine =", newLine);
-        addMoveToHistory("Illegal move: out of bounds.");
-        return;
-      }
-      // Check occupancy: same space (column) and new line should be free.
+      // Check occupancy: the target (newLine, same space) must be free.
       if (pieces.some(p => p.line === newLine && p.space === currentPiece.space)) {
         console.warn("[DEBUG] Illegal move: space is occupied at line", newLine, "space", currentPiece.space);
         addMoveToHistory("Illegal move: space is occupied.");
@@ -406,7 +411,7 @@
     });
     console.log("[DEBUG] Canvas mousedown event listener attached");
 
-    // --- AI Turn ---
+    // --- AI Turn (Vertical with Clamping) ---
     function aiTurn() {
       console.log("[DEBUG] AI turn started");
       if (!pieces.some(p => p.isAI) || difficulty === "none") {
@@ -423,11 +428,21 @@
         const piece = aiPieces[i];
         let newLine;
         if (humanSide === 'left') {
-          newLine = piece.line + diceValue; // Opposite of human: downward
-          console.log("[DEBUG] AI (humanSide left): moving piece from line", piece.line, "downward to", newLine);
+          // If human moves upward, AI moves downward.
+          newLine = piece.line + diceValue;
+          console.log("[DEBUG] AI (humanSide left): calculated newLine =", newLine);
+          if (newLine >= LINE_COUNT) {
+            console.log("[DEBUG] AI clamping newLine to", LINE_COUNT - 1);
+            newLine = LINE_COUNT - 1;
+          }
         } else {
-          newLine = piece.line - diceValue; // Opposite of human: upward
-          console.log("[DEBUG] AI (humanSide right): moving piece from line", piece.line, "upward to", newLine);
+          // If human moves downward, AI moves upward.
+          newLine = piece.line - diceValue;
+          console.log("[DEBUG] AI (humanSide right): calculated newLine =", newLine);
+          if (newLine < 0) {
+            console.log("[DEBUG] AI clamping newLine to 0");
+            newLine = 0;
+          }
         }
         if (newLine >= 0 && newLine < LINE_COUNT &&
             !pieces.some(p => p.line === newLine && p.space === piece.space)) {
@@ -472,12 +487,12 @@
       showOverlay(instructionsScreen);
     });
   
-    // Difficulty selection
+    // Difficulty selection buttons
     document.getElementById('easyBtn').addEventListener('click', () => { difficulty = 'easy'; console.log("[DEBUG] Difficulty set to easy"); });
     document.getElementById('mediumBtn').addEventListener('click', () => { difficulty = 'medium'; console.log("[DEBUG] Difficulty set to medium"); });
     document.getElementById('hardBtn').addEventListener('click', () => { difficulty = 'hard'; console.log("[DEBUG] Difficulty set to hard"); });
   
-    // Side selection buttons: must select a difficulty first.
+    // Side selection buttons: must choose a difficulty first.
     document.getElementById('leftSideBtn').addEventListener('click', () => {
       console.log("[DEBUG] Left side button clicked");
       if (!difficulty) {
