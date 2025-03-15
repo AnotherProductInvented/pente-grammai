@@ -397,7 +397,7 @@ if (!moved) {
       // If the space is set to -1 or TOTAL_COLUMNS, adjust to draw at the extreme edge.
       if (space === -1) x = PIECE_RADIUS;
       else if (space === TOTAL_COLUMNS) x = W - PIECE_RADIUS;
-      else x = (space + 1) * spaceSpacing;
+      else x = (space + 1) * spaceSpacing - PIECE_RADIUS / 2;
       y = (row + 1) * rowSpacing;
       return { x, y };
     }
