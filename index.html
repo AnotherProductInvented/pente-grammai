@@ -96,7 +96,7 @@
   </style>
 </head>
 <body>
-  <!-- Logo (replace "logo.png" with your logo source) -->
+  <!-- Logo (adjust the source as needed) -->
   <img src="logo.png" alt="Logo" id="logo">
   <h1>Another Product Invented<br>Pente Grammai</h1>
   
@@ -161,15 +161,15 @@
     const ctx = canvas.getContext("2d");
     const GAME_WIDTH = canvas.width;
     const GAME_HEIGHT = canvas.height;
-    const LINE_COUNT = 5; // Rows 0 (top) to 4 (bottom)
+    const LINE_COUNT = 5; // Rows: 0 (top) to 4 (bottom)
     const PIECE_RADIUS = 15;
     const HIT_TOLERANCE = 10;
-    // Use 12 columns (0 to 11) so that the extreme edges (0 and 11) are free.
+    // Use 12 columns (0 to 11) so that extreme edges (0 and 11) are free.
     const TOTAL_COLUMNS = 12;
     console.log("[DEBUG] Board constants: GAME_WIDTH =", GAME_WIDTH, "GAME_HEIGHT =", GAME_HEIGHT, "LINE_COUNT =", LINE_COUNT, "TOTAL_COLUMNS =", TOTAL_COLUMNS);
 
-    // --- Movement: 1 column per dice point (horizontal movement)
-    console.log("[DEBUG] Movement: 1 column per dice point");
+    // --- Movement: When a piece is moved, it jumps directly to the edge.
+    console.log("[DEBUG] Movement: direct jump to edge");
 
     // --- Dice Flag ---
     let useCustomDice = false;
@@ -222,9 +222,13 @@
       let startRow = 2;
       console.log("[DEBUG] startRow (center) =", startRow);
       
-      // Set starting positions so that edges are free:
-      // If humanSide is "left": blue (human) pieces in columns 7–11; red (AI) pieces in columns 1–5.
-      // If humanSide is "right": blue pieces in columns 1–5; red pieces in columns 7–11.
+      // Set starting positions so that the target edges are free:
+      // For humanSide "left":
+      //    Blue (human) pieces start in columns 7–11 (so that column 0, the left edge, is free).
+      //    Red (AI) pieces start in columns 1–5.
+      // For humanSide "right":
+      //    Blue pieces start in columns 1–5 (so that column 11, the right edge, is free).
+      //    Red pieces start in columns 7–11.
       if (humanSide === 'left') {
         for (let i = 0; i < 5; i++) {
           pieces.push({ row: startRow, space: i + 7, color: 'blue', isAI: false });
@@ -317,9 +321,10 @@
     });
     console.log("[DEBUG] Dice roll event listener attached");
 
-    // --- Handle Human Piece Movement (Vertical) ---
-    // For humanSide "left": blue pieces move upward (decrease row index) toward row 0.
-    // For humanSide "right": blue pieces move downward (increase row index) toward row LINE_COUNT-1.
+    // --- Handle Human Piece Movement (Horizontal to Edge) ---
+    // When a blue (human) piece is clicked, it will jump directly to its target edge.
+    // For humanSide "left": target edge is column 0.
+    // For humanSide "right": target edge is column TOTAL_COLUMNS - 1.
     canvas.addEventListener('mousedown', (e) => {
       console.log("[DEBUG] Canvas mousedown event triggered");
       if (gameState !== "playing" || !diceRolled || currentTurn !== 'human') {
@@ -333,61 +338,52 @@
       const mouseX = (e.clientX - rect.left) * scaleX;
       const mouseY = (e.clientY - rect.top) * scaleY;
       console.log("[DEBUG] Mouse click at (", mouseX, ",", mouseY, ")");
-      
       const spaceSpacing = GAME_WIDTH / (TOTAL_COLUMNS + 1);
       const rowSpacing = GAME_HEIGHT / (LINE_COUNT + 1);
   
-      // Find the human (blue) piece near the click.
+      // Find the blue (human) piece near the click.
       let selectedIndex = -1;
       for (let i = 0; i < pieces.length; i++) {
         const piece = pieces[i];
-        if (!piece.isAI) {
+        if (!piece.isAI && piece.color === 'blue') {
           const x = (piece.space + 1) * spaceSpacing;
           const y = (piece.row + 1) * rowSpacing;
           const dx = mouseX - x;
           const dy = mouseY - y;
           if (Math.sqrt(dx * dx + dy * dy) <= PIECE_RADIUS + HIT_TOLERANCE) {
             selectedIndex = i;
-            console.log("[DEBUG] Found human piece at index", i, "at (", x, ",", y,")");
+            console.log("[DEBUG] Found human blue piece at index", i, "at (", x, ",", y,")");
             break;
           }
         }
       }
       if (selectedIndex === -1) {
-        console.warn("[DEBUG] No piece found near the click.");
+        console.warn("[DEBUG] No blue piece found near the click.");
         return;
       }
   
       const currentPiece = pieces[selectedIndex];
       console.log("[DEBUG] Selected piece:", currentPiece);
-      let newRow;
+      let targetSpace;
       if (humanSide === 'left') {
-        newRow = currentPiece.row - diceValue;
-        console.log("[DEBUG] Human side left: calculated newRow =", newRow);
-        if (newRow < 0) {
-          console.log("[DEBUG] Clamping newRow to 0");
-          newRow = 0;
-        }
+        targetSpace = 0;
+        console.log("[DEBUG] Human side left: target edge column =", targetSpace);
       } else {
-        newRow = currentPiece.row + diceValue;
-        console.log("[DEBUG] Human side right: calculated newRow =", newRow);
-        if (newRow >= LINE_COUNT) {
-          console.log("[DEBUG] Clamping newRow to", LINE_COUNT - 1);
-          newRow = LINE_COUNT - 1;
-        }
+        targetSpace = TOTAL_COLUMNS - 1;
+        console.log("[DEBUG] Human side right: target edge column =", targetSpace);
       }
   
-      // Check occupancy in the target cell (same column, new row).
-      if (pieces.some(p => p !== currentPiece && p.space === currentPiece.space && p.row === newRow)) {
-        console.warn("[DEBUG] Illegal move: space is occupied at row", newRow, "space =", currentPiece.space);
-        addMoveToHistory("Illegal move: space is occupied.");
+      // Check if target edge cell (same row, targetSpace) is occupied.
+      if (pieces.some(p => p !== currentPiece && p.row === currentPiece.row && p.space === targetSpace)) {
+        console.warn("[DEBUG] Illegal move: target edge cell is occupied at row", currentPiece.row, "space =", targetSpace);
+        addMoveToHistory("Illegal move: target edge cell is occupied.");
         return;
       }
   
-      const previousRow = currentPiece.row;
-      currentPiece.row = newRow;
-      console.log("[DEBUG] Moved piece from row", previousRow, "to", newRow);
-      addMoveToHistory(`Human: Moved from row ${previousRow} to ${newRow} (dice: ${diceValue})`);
+      const previousSpace = currentPiece.space;
+      currentPiece.space = targetSpace;
+      console.log("[DEBUG] Moved piece from space", previousSpace, "to", targetSpace);
+      addMoveToHistory(`Human: Moved from space ${previousSpace} to ${targetSpace} (dice: ${diceValue})`);
   
       // Reset dice and switch turn to AI.
       diceRolled = false;
@@ -399,7 +395,7 @@
     });
     console.log("[DEBUG] Canvas mousedown event listener attached");
 
-    // --- AI Turn (Vertical) ---
+    // --- AI Turn (Horizontal to Edge) ---
     function aiTurn() {
       console.log("[DEBUG] AI turn started");
       if (!pieces.some(p => p.isAI) || difficulty === "none") {
@@ -411,37 +407,29 @@
       console.log("[DEBUG] AI rolled dice:", diceValue);
   
       const aiPieces = pieces.filter(p => p.isAI);
+      let targetSpace;
+      if (humanSide === 'left') {
+        // If human moves to left edge, AI should move to right edge.
+        targetSpace = TOTAL_COLUMNS - 1;
+        console.log("[DEBUG] AI (humanSide left): target edge column =", targetSpace);
+      } else {
+        targetSpace = 0;
+        console.log("[DEBUG] AI (humanSide right): target edge column =", targetSpace);
+      }
+  
       let moved = false;
       for (let i = 0; i < aiPieces.length; i++) {
         const piece = aiPieces[i];
-        let newRow;
-        if (humanSide === 'left') {
-          // If human moves upward, AI moves downward.
-          newRow = piece.row + diceValue;
-          console.log("[DEBUG] AI (humanSide left): calculated newRow =", newRow);
-          if (newRow >= LINE_COUNT) {
-            console.log("[DEBUG] AI clamping newRow to", LINE_COUNT - 1);
-            newRow = LINE_COUNT - 1;
-          }
-        } else {
-          // If human moves downward, AI moves upward.
-          newRow = piece.row - diceValue;
-          console.log("[DEBUG] AI (humanSide right): calculated newRow =", newRow);
-          if (newRow < 0) {
-            console.log("[DEBUG] AI clamping newRow to 0");
-            newRow = 0;
-          }
-        }
-        if (newRow >= 0 && newRow < LINE_COUNT &&
-            !pieces.some(p => p !== piece && p.space === piece.space && p.row === newRow)) {
-          const oldRow = piece.row;
-          piece.row = newRow;
-          addMoveToHistory(`AI: Moved from row ${oldRow} to ${newRow} (dice: ${diceValue})`);
-          console.log("[DEBUG] AI piece moved from row", oldRow, "to", newRow);
+        // Only move an AI piece if its target edge cell is free.
+        if (!pieces.some(p => p !== piece && p.row === piece.row && p.space === targetSpace)) {
+          const oldSpace = piece.space;
+          piece.space = targetSpace;
+          addMoveToHistory(`AI: Moved from space ${oldSpace} to ${targetSpace} (dice: ${diceValue})`);
+          console.log("[DEBUG] AI piece moved from space", oldSpace, "to", targetSpace);
           moved = true;
           break;
         } else {
-          console.log("[DEBUG] AI move invalid for piece at row", piece.row, "space", piece.space, ". Attempted newRow:", newRow);
+          console.log("[DEBUG] AI piece at space", piece.space, "cannot move because target edge is occupied");
         }
       }
   
