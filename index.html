@@ -284,33 +284,31 @@ canvas.addEventListener('mousedown', (e) => {
   let targetRow = selected.row;
   let targetSpace = selected.space;
 
-  if (!selected.phase) selected.phase = 'center';
+if (!selected.phase) selected.phase = 'center';
 
+let stepsRemaining = diceValue;
+while (stepsRemaining > 0) {
   if (selected.phase === 'center') {
-    targetRow = (humanSide === 'left') ? 0 : LINE_COUNT - 1;
-    targetSpace = (humanSide === 'left') ? 0 : TOTAL_COLUMNS - 1;
+    selected.row = (humanSide === 'left') ? 0 : LINE_COUNT - 1;
+    selected.space = (humanSide === 'left') ? 0 : TOTAL_COLUMNS - 1;
     selected.phase = 'edge';
   } else if (selected.phase === 'edge') {
-    targetSpace += (humanSide === 'left') ? 1 : -1;
-    if ((humanSide === 'left' && targetSpace >= TOTAL_COLUMNS - 1) || (humanSide === 'right' && targetSpace <= 0)) {
-      selected.phase = 'side';
+    selected.space += (humanSide === 'left') ? 1 : -1;
+    if ((humanSide === 'left' && selected.space >= TOTAL_COLUMNS - 1) || (humanSide === 'right' && selected.space <= 0)) {
+      selected.phase = 'corner';
     }
-  } else if (selected.phase === 'side') {
-    targetRow = 2;
-    selected.phase = 'entry';
+  } else if (selected.phase === 'corner') {
+    selected.row += (humanSide === 'left') ? 1 : -1;
+    if (selected.row === 2) {
+      selected.phase = 'entry';
+    }
   } else if (selected.phase === 'entry') {
     showMessage("🎉 Piece completed its journey!");
-    return;
+    break;
   }
+  stepsRemaining--;
+}
 
-  const occupied = pieces.some(pp => pp !== selected && pp.row === targetRow && pp.space === targetSpace);
-  if (occupied) {
-    showMessage("⚠️ Space is occupied");
-    return;
-  }
-
-  selected.row = targetRow;
-  selected.space = targetSpace;
 
   addMoveToHistory(`Human moved to row ${targetRow}, space ${targetSpace}`);
   diceValue = 0;
@@ -333,27 +331,47 @@ function aiTurn() {
   const aiOrder = (humanSide === 'left') ? aiPieces.slice().reverse() : aiPieces;
 
   let moved = false;
-  for (let p of aiOrder) {
-    let targetRow = p.row;
-    let targetSpace = p.space;
+ for (let p of aiOrder) {
+  let tempRow = p.row;
+  let tempSpace = p.space;
+  let tempPhase = p.phase || 'center';
 
-    if (!p.phase) p.phase = 'center';
+  let stepsRemaining = diceValue;
+  let valid = true;
 
-    if (p.phase === 'center') {
-      targetRow = (humanSide === 'left') ? 0 : LINE_COUNT - 1;
-      targetSpace = (humanSide === 'left') ? 0 : TOTAL_COLUMNS - 1;
-      p.phase = 'edge';
-    } else if (p.phase === 'edge') {
-      targetSpace += (humanSide === 'left') ? 1 : -1;
-      if ((humanSide === 'left' && targetSpace >= TOTAL_COLUMNS - 1) || (humanSide === 'right' && targetSpace <= 0)) {
-        p.phase = 'side';
+  while (stepsRemaining > 0 && valid) {
+    if (tempPhase === 'center') {
+      tempRow = (humanSide === 'left') ? 0 : LINE_COUNT - 1;
+      tempSpace = (humanSide === 'left') ? 0 : TOTAL_COLUMNS - 1;
+      tempPhase = 'edge';
+    } else if (tempPhase === 'edge') {
+      tempSpace += (humanSide === 'left') ? 1 : -1;
+      if ((humanSide === 'left' && tempSpace >= TOTAL_COLUMNS - 1) || (humanSide === 'right' && tempSpace <= 0)) {
+        tempPhase = 'corner';
       }
-    } else if (p.phase === 'side') {
-      targetRow = 2;
-      p.phase = 'entry';
-    } else if (p.phase === 'entry') {
-      continue;
+    } else if (tempPhase === 'corner') {
+      tempRow += (humanSide === 'left') ? 1 : -1;
+      if (tempRow === 2) tempPhase = 'entry';
+    } else if (tempPhase === 'entry') {
+      valid = false; // Already finished
     }
+    stepsRemaining--;
+  }
+
+  const occupied = pieces.some(pp => pp !== p && pp.row === tempRow && pp.space === tempSpace);
+  if (occupied || !valid) continue;
+
+  const oldRow = p.row;
+  const oldSpace = p.space;
+  p.row = tempRow;
+  p.space = tempSpace;
+  p.phase = tempPhase;
+
+  addMoveToHistory(`AI moved piece from row ${oldRow}, space ${oldSpace} to row ${tempRow}, space ${tempSpace}`);
+  moved = true;
+  break;
+}
+
 
     const occupied = pieces.some(pp => pp !== p && pp.row === targetRow && pp.space === targetSpace);
     if (occupied) continue;
