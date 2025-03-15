@@ -227,25 +227,24 @@
       // Set starting positions based on side selection.
       // For humanSide "left": Blue (human) pieces appear in columns 1–5 (left half) and Red (AI) pieces in columns 7–11.
       // For humanSide "right": Blue pieces appear in columns 7–11 and Red pieces in columns 1–5.
-      if (humanSide === 'left') {
-        for (let i = 0; i < 5; i++) {
-          pieces.push({ row: startRow, space: 1 + i, color: 'blue', isAI: false });
-          console.log("[DEBUG] Added blue piece at row", startRow, "space =", 1 + i);
-        }
-        for (let i = 0; i < 5; i++) {
-          pieces.push({ row: startRow, space: 7 + i, color: 'red', isAI: true });
-          console.log("[DEBUG] Added red piece at row", startRow, "space =", 7 + i);
-        }
-      } else { // humanSide === 'right'
-        for (let i = 0; i < 5; i++) {
-          pieces.push({ row: startRow, space: 7 + i, color: 'blue', isAI: false });
-          console.log("[DEBUG] Added blue piece at row", startRow, "space =", 7 + i);
-        }
-        for (let i = 0; i < 5; i++) {
-          pieces.push({ row: startRow, space: 1 + i, color: 'red', isAI: true });
-          console.log("[DEBUG] Added red piece at row", startRow, "space =", 1 + i);
-        }
-      }
+if (humanSide === 'left') {
+  // Spread human pieces from columns 0–4, AI pieces from 7–11
+  for (let i = 0; i < 5; i++) {
+    pieces.push({ row: startRow, space: i, color: 'blue', isAI: false });
+  }
+  for (let i = 0; i < 5; i++) {
+    pieces.push({ row: startRow, space: 7 + i, color: 'red', isAI: true });
+  }
+} else {
+  // Spread human pieces from 7–11, AI from 0–4
+  for (let i = 0; i < 5; i++) {
+    pieces.push({ row: startRow, space: 7 + i, color: 'blue', isAI: false });
+  }
+  for (let i = 0; i < 5; i++) {
+    pieces.push({ row: startRow, space: i, color: 'red', isAI: true });
+  }
+}
+
       addMoveToHistory(`New game started. Side=${humanSide}, Difficulty=${difficulty}.`);
       redrawBoard();
     }
