@@ -423,14 +423,12 @@
     }
 
     // --- Move History ---
-    function addMoveToHistory(msg) {
-      console.log(msg);
-      const li = document.createElement('li');
-      li.textContent = msg;
-      movesList.appendChild(li);
-      movesList.scrollTop = movesList.scrollHeight;
-    }
-
+function addMoveToHistory(text) {
+  const movesList = document.getElementById("movesList");
+  const li = document.createElement('li');
+  li.textContent = text;
+  movesList.prepend(li);
+}
     // --- Overlay Button Event Listeners ---
     newGameBtn.addEventListener('click', () => {
       showOverlay(difficultyScreen);
