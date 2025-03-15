@@ -334,7 +334,8 @@ if (targetRow !== 2) {
       const oldRow = p.row;
       p.row = targetRow;
       // Set piece's space to 6 (the yellow highlight)
-      
+      p.space = (humanSide === 'left') ? 0 : TOTAL_COLUMNS - 1;
+
       addMoveToHistory(`Human moved piece from row ${oldRow} to row ${targetRow} (dice=${diceValue}).`);
 
       diceRolled = false;
