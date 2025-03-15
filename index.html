@@ -325,7 +325,7 @@
       const oldRow = p.row;
       p.row = targetRow;
       // After moving, set its column to 6 (the yellow highlight)
-      p.space = (humanSide === 'left') ? 0 : 11;
+      p.space = (humanSide === 'left') ? -1 : 12;
       addMoveToHistory(`Human moved piece from row ${oldRow} to row ${targetRow} (dice=${diceValue}).`);
 
       diceRolled = false;
@@ -364,7 +364,7 @@
         }
         const oldRow = p.row;
         p.row = targetRow;
-        p.space = (humanSide === 'left') ? 11 : 0;
+        p.space = (humanSide === 'left') ? 12 : -1;
         addMoveToHistory(`AI moved piece from row ${oldRow} to row ${targetRow} (dice=${diceValue}).`);
         moved = true;
         break;
