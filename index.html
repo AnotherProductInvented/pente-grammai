@@ -227,23 +227,9 @@
       // Set starting positions based on side selection.
       // For humanSide "left": Blue (human) pieces appear in columns 1–5 (left half) and Red (AI) pieces in columns 7–11.
       // For humanSide "right": Blue pieces appear in columns 7–11 and Red pieces in columns 1–5.
-if (humanSide === 'left') {
-  // Human (Left side) = 0–4, AI (Right side) = 0–4 [reverse side]
-  for (let i = 0; i < 5; i++) {
-    pieces.push({ row: startRow, space: i, color: 'blue', isAI: false });
-  }
-  for (let i = 0; i < 5; i++) {
-    pieces.push({ row: startRow, space: i, color: 'red', isAI: true });
-  }
-} else {
-  // Human (Right side) = 7–11, AI (Left side) = 0–4 [reverse side]
-  for (let i = 0; i < 5; i++) {
-    pieces.push({ row: startRow, space: 7 + i, color: 'blue', isAI: false });
-  }
-  for (let i = 0; i < 5; i++) {
-    pieces.push({ row: startRow, space: i, color: 'red', isAI: true });
-  }
-}
+for (let i = 0; i < 5; i++) pieces.push({ row: startRow, space: 7 + i, color: 'blue', isAI: false });
+for (let i = 0; i < 5; i++) pieces.push({ row: startRow, space: i, color: 'red', isAI: true });
+
 
 
       addMoveToHistory(`New game started. Side=${humanSide}, Difficulty=${difficulty}.`);
