@@ -6,11 +6,7 @@
   <title>Another Product Invented – Pente Grammai</title>
   <style>
     /* Global Reset */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       background: #fff;
       font-family: sans-serif;
@@ -42,18 +38,11 @@
       border: 2px solid #555;
       background: #eee;
     }
-    canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
+    canvas { display: block; width: 100%; height: 100%; }
     /* Overlay Screens */
     .overlayScreen {
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
+      top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(255,255,255,0.95);
       display: none;
       flex-direction: column;
@@ -77,8 +66,7 @@
       justify-content: center;
       margin-top: 10px;
     }
-    #difficultyContainer,
-    #sideContainer {
+    #difficultyContainer, #sideContainer {
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -94,10 +82,7 @@
       font-size: 18px;
       font-weight: bold;
     }
-    #diceRollBtn {
-      font-size: 18px;
-      margin-left: 10px;
-    }
+    #diceRollBtn { font-size: 18px; margin-left: 10px; }
     #pastMoves {
       width: 180px;
       border: 1px solid #444;
@@ -106,28 +91,20 @@
       overflow-y: auto;
       height: 120px;
     }
-    #pastMoves ul {
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-    #pastMoves li {
-      margin: 2px 0;
-      font-size: 14px;
-    }
+    #pastMoves ul { margin: 0; padding: 0; list-style: none; }
+    #pastMoves li { margin: 2px 0; font-size: 14px; }
   </style>
 </head>
 <body>
-  <!-- Logo (replace "logo.png" with your actual logo source) -->
+  <!-- Logo (adjust source as needed) -->
   <img src="logo.png" alt="Logo" id="logo">
-  
   <h1>Another Product Invented<br>Pente Grammai</h1>
   
   <!-- Game Container -->
   <div id="gameContainer">
     <canvas id="gameCanvas" width="500" height="500"></canvas>
     
-    <!-- Overlay Screens -->
+    <!-- Overlays -->
     <div id="menuScreen" class="overlayScreen" style="display:flex;">
       <button id="newGameBtn">New Game</button>
       <button id="instructionsBtn">Instructions</button>
@@ -137,7 +114,7 @@
       <p>1) The game supports a standard dice roll.</p>
       <p>2) I have 5 pieces and you have 5 pieces, all initially placed on the center line.</p>
       <p>3) Roll the dice and click your piece to attempt a move.</p>
-      <p>4) The objective is to move your pieces from the center line to the opposite center line, following an anti‑clockwise direction.</p>
+      <p>4) The objective is to move your pieces from the center line to the board edge (the final destination), following an anti‑clockwise direction.</p>
       <p>5) Occupied spaces cannot be landed on. If you attempt to move a piece onto an occupied space, the move is illegal.</p>
       <p>Press [M] to return to the Main Menu.</p>
     </div>
@@ -164,7 +141,7 @@
     </div>
   </div>
   
-  <!-- Dice and Past Moves Area -->
+  <!-- Dice and Move History -->
   <div id="diceArea">
     <div>
       Dice: <span id="diceResult">0</span>
@@ -184,18 +161,23 @@
     const ctx = canvas.getContext("2d");
     const GAME_WIDTH = canvas.width;
     const GAME_HEIGHT = canvas.height;
-    const LINE_COUNT = 5; // Lines indexed 0 to 4; center is index 2.
+    const LINE_COUNT = 5; // Board is divided into 5 horizontal zones (0 at top, 4 at bottom)
     const PIECE_RADIUS = 15;
-    const HIT_TOLERANCE = 10; // Extra tolerance for detecting clicks.
-    console.log("[DEBUG] Constants defined: GAME_WIDTH =", GAME_WIDTH, "GAME_HEIGHT =", GAME_HEIGHT, "LINE_COUNT =", LINE_COUNT);
+    const HIT_TOLERANCE = 10;
+    console.log("[DEBUG] Board constants set: GAME_WIDTH =", GAME_WIDTH, "GAME_HEIGHT =", GAME_HEIGHT, "LINE_COUNT =", LINE_COUNT);
+
+    // --- Movement Factor ---
+    // How many pixels to move per dice point.
+    const moveFactor = 100; 
+    console.log("[DEBUG] moveFactor set to", moveFactor, "pixels per dice point");
 
     // --- Dice Flag ---
     let useCustomDice = false;
     console.log("[DEBUG] useCustomDice =", useCustomDice);
 
     // --- Game State Variables ---
-    // Each piece: { line, space, color, isAI }
-    let pieces = [];
+    // Each piece now has a continuous vertical position (y) and a fixed horizontal position (space)
+    let pieces = [];  // Each piece: { y, space, color, isAI }
     let movesHistory = [];
     let difficulty = null;
     let humanSide = null; // 'left' or 'right'
@@ -237,25 +219,35 @@
       currentTurn = 'human';
       console.log("[DEBUG] Game state reset");
 
-      // Place 5 blue (human) and 5 red (AI) pieces on the center line (line index 2).
-      // We'll use 10 columns (space indices 0 to 9) so pieces don't overlap.
+      // We'll use 10 columns (space indices 0 to 9) for horizontal positions.
+      // All pieces start on the center line: y = GAME_HEIGHT/2.
+      let startY = GAME_HEIGHT / 2;
+      console.log("[DEBUG] startY (center) =", startY);
       if (humanSide === 'left') {
+        // Blue (human) pieces: start at spaces 3,4,5,6,7 (center columns)
         for (let i = 0; i < 5; i++) {
-          pieces.push({ line: 2, space: i, color: 'blue', isAI: false });
-          console.log("[DEBUG] Added blue piece at line 2, space", i);
+          let space = 3 + i;
+          pieces.push({ y: startY, space: space, color: 'blue', isAI: false });
+          console.log("[DEBUG] Added blue piece at y =", startY, "space =", space);
         }
+        // Red (AI) pieces: start at same center line, but in different columns, e.g., spaces 3,4,5,6,7 as well.
+        // (For clarity, we'll offset them slightly horizontally; they won't move horizontally.)
         for (let i = 0; i < 5; i++) {
-          pieces.push({ line: 2, space: i + 5, color: 'red', isAI: true });
-          console.log("[DEBUG] Added red piece at line 2, space", i + 5);
+          let space = 3 + i; // Same as blue initially
+          pieces.push({ y: startY, space: space, color: 'red', isAI: true });
+          console.log("[DEBUG] Added red piece at y =", startY, "space =", space);
         }
       } else { // humanSide === 'right'
+        // Swap colors: Blue pieces on right, red pieces on left.
         for (let i = 0; i < 5; i++) {
-          pieces.push({ line: 2, space: i + 5, color: 'blue', isAI: false });
-          console.log("[DEBUG] Added blue piece at line 2, space", i + 5);
+          let space = 3 + i;
+          pieces.push({ y: startY, space: space, color: 'blue', isAI: false });
+          console.log("[DEBUG] Added blue piece at y =", startY, "space =", space);
         }
         for (let i = 0; i < 5; i++) {
-          pieces.push({ line: 2, space: i, color: 'red', isAI: true });
-          console.log("[DEBUG] Added red piece at line 2, space", i);
+          let space = 3 + i;
+          pieces.push({ y: startY, space: space, color: 'red', isAI: true });
+          console.log("[DEBUG] Added red piece at y =", startY, "space =", space);
         }
       }
       gameState = "playing";
@@ -274,8 +266,9 @@
     }
     console.log("[DEBUG] redrawBoard defined");
 
-    // --- Draw Lines ---
+    // --- Draw Grid Lines ---
     function drawLines() {
+      // We'll draw 5 horizontal lines for reference.
       const lineSpacing = GAME_HEIGHT / (LINE_COUNT + 1);
       console.log("[DEBUG] drawLines: lineSpacing =", lineSpacing);
       ctx.strokeStyle = "#000";
@@ -286,24 +279,25 @@
         ctx.moveTo(0, y);
         ctx.lineTo(GAME_WIDTH, y);
         ctx.stroke();
-        console.log("[DEBUG] Drew line", i, "at y =", y);
+        console.log("[DEBUG] Drew grid line", i, "at y =", y);
       }
     }
     console.log("[DEBUG] drawLines defined");
 
     // --- Draw Pieces ---
     function drawPieces() {
-      const spaceSpacing = GAME_WIDTH / (10 + 1); // 10 columns: indices 0 to 9
-      const lineSpacing = GAME_HEIGHT / (LINE_COUNT + 1);
-      console.log("[DEBUG] drawPieces: spaceSpacing =", spaceSpacing, "lineSpacing =", lineSpacing);
+      // We use a fixed horizontal spacing for columns.
+      const totalColumns = 10; // indices 0 to 9
+      const spaceSpacing = GAME_WIDTH / (totalColumns + 1);
+      console.log("[DEBUG] drawPieces: spaceSpacing =", spaceSpacing);
       pieces.forEach((piece, index) => {
         const x = (piece.space + 1) * spaceSpacing;
-        const y = (piece.line + 1) * lineSpacing;
+        const y = piece.y; // use continuous y
         ctx.fillStyle = piece.color;
         ctx.beginPath();
         ctx.arc(x, y, PIECE_RADIUS, 0, Math.PI * 2);
         ctx.fill();
-        console.log("[DEBUG] Drew piece", index, "(", piece.color, ") at (" + x + ", " + y + ")");
+        console.log("[DEBUG] Drew piece", index, "(", piece.color, ") at (", x, ",", y,")");
       });
     }
     console.log("[DEBUG] drawPieces defined");
@@ -320,7 +314,7 @@
     document.getElementById('diceRollBtn').addEventListener('click', () => {
       console.log("[DEBUG] Dice roll button clicked");
       if (gameState !== "playing" || currentTurn !== 'human' || diceRolled) {
-        console.log("[DEBUG] Dice roll ignored: gameState =", gameState, ", currentTurn =", currentTurn, ", diceRolled =", diceRolled);
+        console.log("[DEBUG] Dice roll ignored: gameState =", gameState, "currentTurn =", currentTurn, "diceRolled =", diceRolled);
         console.warn("Cannot roll dice right now.");
         return;
       }
@@ -331,19 +325,21 @@
     });
     console.log("[DEBUG] Dice roll event listener attached");
 
-    // --- Handle Human Piece Movement (Vertical with Clamping) ---
+    // --- Handle Human Piece Movement (Horizontal Movement to Edge) ---
+    // Now, instead of vertical movement, we change the "space" coordinate.
+    // For humanSide "left": blue pieces move left (decreasing space), for "right": they move right (increasing space).
     canvas.addEventListener('mousedown', (e) => {
       console.log("[DEBUG] Canvas mousedown event triggered");
       if (gameState !== "playing" || !diceRolled || currentTurn !== 'human') {
-        console.log("[DEBUG] Ignoring click: gameState =", gameState, ", diceRolled =", diceRolled, ", currentTurn =", currentTurn);
+        console.log("[DEBUG] Ignoring click: gameState =", gameState, "diceRolled =", diceRolled, "currentTurn =", currentTurn);
         return;
       }
       const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
       console.log("[DEBUG] Mouse click at (" + mouseX + ", " + mouseY + ")");
-      const lineSpacing = GAME_HEIGHT / (LINE_COUNT + 1);
-      const spaceSpacing = GAME_WIDTH / (10 + 1);
+      const totalColumns = 10;
+      const spaceSpacing = GAME_WIDTH / (totalColumns + 1);
   
       // Find the human (blue) piece near the click.
       let selectedIndex = -1;
@@ -351,12 +347,13 @@
         const piece = pieces[i];
         if (!piece.isAI) {
           const x = (piece.space + 1) * spaceSpacing;
-          const y = (piece.line + 1) * lineSpacing;
+          // We'll use the piece's y coordinate for vertical alignment.
+          const y = piece.y;
           const dx = mouseX - x;
           const dy = mouseY - y;
           if (Math.sqrt(dx * dx + dy * dy) <= PIECE_RADIUS + HIT_TOLERANCE) {
             selectedIndex = i;
-            console.log("[DEBUG] Found human piece at index", i, "at (" + x + ", " + y + ")");
+            console.log("[DEBUG] Found human piece at index", i, "at (", x, ",", y,")");
             break;
           }
         }
@@ -368,40 +365,38 @@
   
       const currentPiece = pieces[selectedIndex];
       console.log("[DEBUG] Selected piece:", currentPiece);
-      let newLine;
+      let newSpace;
       if (humanSide === 'left') {
-        // For left side, blue pieces move upward.
-        newLine = currentPiece.line - diceValue;
-        console.log("[DEBUG] Human side left: calculated newLine =", newLine);
-        // Clamp to top edge (line index 0)
-        if (newLine < 0) {
-          console.log("[DEBUG] Clamping newLine to 0");
-          newLine = 0;
+        // For left side, blue pieces move left: subtract diceValue.
+        newSpace = currentPiece.space - diceValue;
+        console.log("[DEBUG] Human side left: calculated newSpace =", newSpace);
+        if (newSpace < 0) {
+          console.log("[DEBUG] Clamping newSpace to 0");
+          newSpace = 0;
         }
       } else {
-        // For right side, blue pieces move downward.
-        newLine = currentPiece.line + diceValue;
-        console.log("[DEBUG] Human side right: calculated newLine =", newLine);
-        // Clamp to bottom edge (line index LINE_COUNT - 1)
-        if (newLine >= LINE_COUNT) {
-          console.log("[DEBUG] Clamping newLine to", LINE_COUNT - 1);
-          newLine = LINE_COUNT - 1;
+        // For right side, blue pieces move right: add diceValue.
+        newSpace = currentPiece.space + diceValue;
+        console.log("[DEBUG] Human side right: calculated newSpace =", newSpace);
+        if (newSpace >= totalColumns) {
+          console.log("[DEBUG] Clamping newSpace to", totalColumns - 1);
+          newSpace = totalColumns - 1;
         }
       }
   
-      // Check occupancy: the target (newLine, same space) must be free.
-      if (pieces.some(p => p.line === newLine && p.space === currentPiece.space)) {
-        console.warn("[DEBUG] Illegal move: space is occupied at line", newLine, "space", currentPiece.space);
+      // Check occupancy: the target (same y, new space) must be free.
+      if (pieces.some(p => p.space === newSpace && p.y === currentPiece.y)) {
+        console.warn("[DEBUG] Illegal move: space is occupied at space", newSpace, "y =", currentPiece.y);
         addMoveToHistory("Illegal move: space is occupied.");
         return;
       }
   
-      const previousLine = currentPiece.line;
-      currentPiece.line = newLine;
-      console.log("[DEBUG] Moved piece from line", previousLine, "to", newLine);
-      addMoveToHistory(`Human: Moved from line ${previousLine} to ${newLine} (dice: ${diceValue})`);
+      const previousSpace = currentPiece.space;
+      currentPiece.space = newSpace;
+      console.log("[DEBUG] Moved piece from space", previousSpace, "to", newSpace);
+      addMoveToHistory(`Human: Moved from space ${previousSpace} to ${newSpace} (dice: ${diceValue})`);
   
-      // Reset dice and pass turn to AI.
+      // Reset dice and switch turn to AI.
       diceRolled = false;
       diceValue = 0;
       diceResultSpan.textContent = "0";
@@ -411,7 +406,7 @@
     });
     console.log("[DEBUG] Canvas mousedown event listener attached");
 
-    // --- AI Turn (Vertical with Clamping) ---
+    // --- AI Turn (Horizontal Movement) ---
     function aiTurn() {
       console.log("[DEBUG] AI turn started");
       if (!pieces.some(p => p.isAI) || difficulty === "none") {
@@ -422,38 +417,39 @@
       diceResultSpan.textContent = diceValue;
       console.log("[DEBUG] AI rolled dice:", diceValue);
   
+      const totalColumns = 10;
       const aiPieces = pieces.filter(p => p.isAI);
       let moved = false;
       for (let i = 0; i < aiPieces.length; i++) {
         const piece = aiPieces[i];
-        let newLine;
+        let newSpace;
         if (humanSide === 'left') {
-          // If human moves upward, AI moves downward.
-          newLine = piece.line + diceValue;
-          console.log("[DEBUG] AI (humanSide left): calculated newLine =", newLine);
-          if (newLine >= LINE_COUNT) {
-            console.log("[DEBUG] AI clamping newLine to", LINE_COUNT - 1);
-            newLine = LINE_COUNT - 1;
+          // If human moves left (blue), AI moves right.
+          newSpace = piece.space + diceValue;
+          console.log("[DEBUG] AI (humanSide left): calculated newSpace =", newSpace);
+          if (newSpace >= totalColumns) {
+            console.log("[DEBUG] AI clamping newSpace to", totalColumns - 1);
+            newSpace = totalColumns - 1;
           }
         } else {
-          // If human moves downward, AI moves upward.
-          newLine = piece.line - diceValue;
-          console.log("[DEBUG] AI (humanSide right): calculated newLine =", newLine);
-          if (newLine < 0) {
-            console.log("[DEBUG] AI clamping newLine to 0");
-            newLine = 0;
+          // If human moves right, AI moves left.
+          newSpace = piece.space - diceValue;
+          console.log("[DEBUG] AI (humanSide right): calculated newSpace =", newSpace);
+          if (newSpace < 0) {
+            console.log("[DEBUG] AI clamping newSpace to 0");
+            newSpace = 0;
           }
         }
-        if (newLine >= 0 && newLine < LINE_COUNT &&
-            !pieces.some(p => p.line === newLine && p.space === piece.space)) {
-          const oldLine = piece.line;
-          piece.line = newLine;
-          addMoveToHistory(`AI: Moved from line ${oldLine} to ${newLine} (dice: ${diceValue})`);
-          console.log("[DEBUG] AI piece moved from line", oldLine, "to", newLine);
+        if (newSpace >= 0 && newSpace < totalColumns &&
+            !pieces.some(p => p !== piece && p.space === newSpace && p.y === piece.y)) {
+          const oldSpace = piece.space;
+          piece.space = newSpace;
+          addMoveToHistory(`AI: Moved from space ${oldSpace} to ${newSpace} (dice: ${diceValue})`);
+          console.log("[DEBUG] AI piece moved from space", oldSpace, "to", newSpace);
           moved = true;
           break;
         } else {
-          console.log("[DEBUG] AI move invalid for piece at line", piece.line, ". Attempted newLine:", newLine);
+          console.log("[DEBUG] AI move invalid for piece at space", piece.space, ". Attempted newSpace:", newSpace);
         }
       }
   
