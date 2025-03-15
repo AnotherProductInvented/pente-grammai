@@ -154,7 +154,7 @@
       <ul id="movesList"></ul>
     </div>
   </div>
-  
+  <div id="messageArea" style="color: red; font-weight: bold; margin: 10px;"></div>
   <script>
     'use strict';
     console.log("[DEBUG] Script started");
@@ -324,12 +324,13 @@ if (humanSide === 'left') {
         return;
       }
       // For rows other than the center row (row 2), only one piece may occupy the highlighted cell (col 6).
-      if (targetRow !== 2) {
-        if (pieces.some(pp => pp !== p && pp.row === targetRow && pp.space === 6)) {
-          addMoveToHistory(`Illegal move: The highlighted cell on row ${targetRow} is already occupied.`);
-          return;
-        }
-      }
+if (targetRow !== 2) {
+  if (pieces.some(pp => pp !== p && pp.row === targetRow && pp.space === 6)) {
+    showMessage("⚠️ Space is occupied");
+    return;
+  }
+}
+
       const oldRow = p.row;
       p.row = targetRow;
       // Set piece's space to 6 (the yellow highlight)
@@ -386,6 +387,13 @@ if (!moved) {
     console.log("[DEBUG] aiTurn defined");
 
     // --- Utility Functions ---
+    // --- Message Display ---
+function showMessage(text) {
+  const msgDiv = document.getElementById("messageArea");
+  msgDiv.textContent = text;
+  setTimeout(() => { msgDiv.textContent = ""; }, 2000);
+}
+
     function getSpacings() {
       const spaceSpacing = W / (TOTAL_COLUMNS + 1);
       const rowSpacing = H / (LINE_COUNT + 1);
