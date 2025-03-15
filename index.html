@@ -219,20 +219,12 @@
       let startY = GAME_HEIGHT / 2; // Center vertically
       console.log("[DEBUG] startY (center) =", startY);
       
-      // Starting Positions:
-      // If humanSide is "left", we want blue (human) pieces to be on the left half (columns 0–4)
-      // and red (AI) pieces on the right half (columns 5–9).
-      // If humanSide is "right", swap the assignments.
+      // Set starting positions so that blue pieces can move toward the edge.
+      // For humanSide "left": Place blue (human) pieces on columns 5–9 (so they can move left)
+      // and red (AI) pieces on columns 0–4.
+      // For humanSide "right": Place blue pieces on columns 0–4 (so they can move right)
+      // and red pieces on columns 5–9.
       if (humanSide === 'left') {
-        for (let i = 0; i < 5; i++) {
-          pieces.push({ y: startY, space: i, color: 'blue', isAI: false });
-          console.log("[DEBUG] Added blue piece at y =", startY, "space =", i);
-        }
-        for (let i = 0; i < 5; i++) {
-          pieces.push({ y: startY, space: i + 5, color: 'red', isAI: true });
-          console.log("[DEBUG] Added red piece at y =", startY, "space =", i + 5);
-        }
-      } else { // humanSide === 'right'
         for (let i = 0; i < 5; i++) {
           pieces.push({ y: startY, space: i + 5, color: 'blue', isAI: false });
           console.log("[DEBUG] Added blue piece at y =", startY, "space =", i + 5);
@@ -240,6 +232,15 @@
         for (let i = 0; i < 5; i++) {
           pieces.push({ y: startY, space: i, color: 'red', isAI: true });
           console.log("[DEBUG] Added red piece at y =", startY, "space =", i);
+        }
+      } else { // humanSide === 'right'
+        for (let i = 0; i < 5; i++) {
+          pieces.push({ y: startY, space: i, color: 'blue', isAI: false });
+          console.log("[DEBUG] Added blue piece at y =", startY, "space =", i);
+        }
+        for (let i = 0; i < 5; i++) {
+          pieces.push({ y: startY, space: i + 5, color: 'red', isAI: true });
+          console.log("[DEBUG] Added red piece at y =", startY, "space =", i + 5);
         }
       }
       gameState = "playing";
@@ -369,7 +370,7 @@
         }
       }
   
-      // Check occupancy (excluding the current piece)
+      // Check occupancy (excluding current piece)
       if (pieces.some(p => p !== currentPiece && p.y === currentPiece.y && p.space === newSpace)) {
         console.warn("[DEBUG] Illegal move: space is occupied at space", newSpace, "y =", currentPiece.y);
         addMoveToHistory("Illegal move: space is occupied.");
