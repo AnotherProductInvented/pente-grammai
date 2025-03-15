@@ -171,14 +171,12 @@
     console.log("[DEBUG] Board constants:", {W, H, LINE_COUNT, TOTAL_COLUMNS, PIECE_RADIUS});
 
     // --- Game State ---
-    let pieces = [];  // Each piece: { row, space, color, isAI }
-    let movesHistory = [];
-    let diceValue = 0;
-    let diceRolled = false;
+    let pieces = [];
     let currentTurn = 'human';
     let gameState = 'menu';
-    let difficulty = null;
-    let humanSide = null;
+    let diceRolled = false;
+    let humanSide = 'left';
+    let difficulty = 'medium';
     console.log("[DEBUG] Game state variables initialized");
 
     // --- DOM Elements ---
@@ -195,10 +193,11 @@
     const rightSideBtn = document.getElementById("rightSideBtn");
     const instructionsBtn = document.getElementById("instructionsBtn");
     const gameOverNewGameBtn = document.getElementById("gameOverNewGameBtn");
+    
     console.log("[DEBUG] DOM elements loaded");
 
     // --- Overlay Control ---
-    function showOverlay(overlay) {
+    let showOverlay = (overlay) => {
       // Hide all overlays
       [menuScreen, instructionsScreen, difficultyScreen, gameOverScreen].forEach(screen => {
         screen.style.display = "none";
@@ -221,7 +220,7 @@
       gameState = 'playing';
 
       // All pieces start on the center line (row = 2)
-      let startRow = 2;
+      const startRow = 2;
       console.log("[DEBUG] startRow (center) =", startRow);
 
       // Set starting positions based on side selection.
@@ -279,16 +278,19 @@ canvas.addEventListener('mousedown', (e) => {
   const mx = (e.clientX - rect.left) * scaleX;
   const my = (e.clientY - rect.top) * scaleY;
 
-  let selectedPiece = null;
-  for (let piece of pieces) {
-    if (!piece.isAI && piece.color === 'blue') {
-      const { x, y } = lineSpaceToCoords(piece.row, piece.space);
-      if (Math.hypot(mx - x, my - y) <= PIECE_RADIUS + HIT_TOLERANCE) {
-        selectedPiece = piece;
-        break;
-      }
+let selectedPiece = null;
+
+for (let piece of pieces) {
+  if (!piece.isAI && piece.color === 'blue') {
+    const { x, y } = lineSpaceToCoords(piece.row, piece.space);
+    if (Math.hypot(mx - x, my - y) <= PIECE_RADIUS + HIT_TOLERANCE) {
+      selectedPiece = piece;
+      break;
     }
   }
+}
+
+
 
   if (!selectedPiece) return;
 
@@ -309,10 +311,17 @@ canvas.addEventListener('mousedown', (e) => {
     movesRemaining--;
   }
 
-  if (pieces.some(p => p !== selectedPiece && p.row === row && p.space === space)) {
-  alert('Illegal move: Target cell occupied.');
-  return;
-  }
+if (pieces.some(p => p !== selectedPiece && p.row === row && p.space === space)) {
+document.getElementById('diceResult').textContent = "0";
+document.getElementById('gameOverText').textContent = 'Cell occupied, choose another piece.';
+diceRolled = false;
+redrawBoard();
+return;
+
+} else {
+  document.getElementById('gameOverText').textContent = '';
+}
+
 
   selectedPiece.row = row;
   selectedPiece.space = space;
