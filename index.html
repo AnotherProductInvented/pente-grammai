@@ -289,16 +289,23 @@ if (!selected.phase) selected.phase = 'center';
 let stepsRemaining = diceValue;
 while (stepsRemaining > 0) {
   if (selected.phase === 'center') {
-    selected.row = (humanSide === 'left') ? 0 : LINE_COUNT - 1;
-    selected.space = (humanSide === 'left') ? 0 : TOTAL_COLUMNS - 1;
-    selected.phase = 'edge';
+    const nextRow = (humanSide === 'left') ? selected.row - 1 : selected.row + 1;
+    if (nextRow >= 0 && nextRow < LINE_COUNT) {
+      selected.row = nextRow;
+      if (selected.row === 0 && humanSide === 'left') {
+        selected.phase = 'edge';
+      } else if (selected.row === LINE_COUNT - 1 && humanSide === 'right') {
+        selected.phase = 'edge';
+      }
+    }
   } else if (selected.phase === 'edge') {
     selected.space += (humanSide === 'left') ? 1 : -1;
     if ((humanSide === 'left' && selected.space >= TOTAL_COLUMNS - 1) || (humanSide === 'right' && selected.space <= 0)) {
       selected.phase = 'corner';
     }
   } else if (selected.phase === 'corner') {
-    selected.row += (humanSide === 'left') ? 1 : -1;
+    const nextRow = (humanSide === 'left') ? selected.row + 1 : selected.row - 1;
+    selected.row = nextRow;
     if (selected.row === 2) {
       selected.phase = 'entry';
     }
@@ -308,6 +315,7 @@ while (stepsRemaining > 0) {
   }
   stepsRemaining--;
 }
+
 
 
   addMoveToHistory(`Human moved to row ${targetRow}, space ${targetSpace}`);
@@ -339,24 +347,35 @@ function aiTurn() {
   let stepsRemaining = diceValue;
   let valid = true;
 
-  while (stepsRemaining > 0 && valid) {
-    if (tempPhase === 'center') {
-      tempRow = (humanSide === 'left') ? 0 : LINE_COUNT - 1;
-      tempSpace = (humanSide === 'left') ? 0 : TOTAL_COLUMNS - 1;
-      tempPhase = 'edge';
-    } else if (tempPhase === 'edge') {
-      tempSpace += (humanSide === 'left') ? 1 : -1;
-      if ((humanSide === 'left' && tempSpace >= TOTAL_COLUMNS - 1) || (humanSide === 'right' && tempSpace <= 0)) {
-        tempPhase = 'corner';
+  while (stepsRemaining > 0) {
+  if (tempPhase === 'center') {
+    const nextRow = (humanSide === 'left') ? tempRow - 1 : tempRow + 1;
+    if (nextRow >= 0 && nextRow < LINE_COUNT) {
+      tempRow = nextRow;
+      if (tempRow === 0 && humanSide === 'left') {
+        tempPhase = 'edge';
+      } else if (tempRow === LINE_COUNT - 1 && humanSide === 'right') {
+        tempPhase = 'edge';
       }
-    } else if (tempPhase === 'corner') {
-      tempRow += (humanSide === 'left') ? 1 : -1;
-      if (tempRow === 2) tempPhase = 'entry';
-    } else if (tempPhase === 'entry') {
-      valid = false; // Already finished
     }
-    stepsRemaining--;
+  } else if (tempPhase === 'edge') {
+    tempSpace += (humanSide === 'left') ? 1 : -1;
+    if ((humanSide === 'left' && tempSpace >= TOTAL_COLUMNS - 1) || (humanSide === 'right' && tempSpace <= 0)) {
+      tempPhase = 'corner';
+    }
+  } else if (tempPhase === 'corner') {
+    const nextRow = (humanSide === 'left') ? tempRow + 1 : tempRow - 1;
+    tempRow = nextRow;
+    if (tempRow === 2) {
+      tempPhase = 'entry';
+    }
+  } else if (tempPhase === 'entry') {
+    valid = false; // Already finished
+    break;
   }
+  stepsRemaining--;
+}
+
 
   const occupied = pieces.some(pp => pp !== p && pp.row === tempRow && pp.space === tempSpace);
   if (occupied || !valid) continue;
