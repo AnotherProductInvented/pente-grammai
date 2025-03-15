@@ -356,7 +356,6 @@ const aiOrder = (humanSide === 'left') ? aiPieces : aiPieces.slice().reverse();
 for (let i = 0; i < aiOrder.length; i++) {
   const p = aiOrder[i];
 
-  const p = aiPieces[i];
   let targetRow = (humanSide === 'left') ? p.row + 1 : p.row - 1;
 
   if (targetRow < 0 || targetRow >= LINE_COUNT) continue;
