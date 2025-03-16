@@ -392,11 +392,12 @@ if (currentIndex === -1) {
     console.log("[DEBUG] aiTurn defined");
 
     // --- Utility Functions ---
-    function getSpacings() {
-      const spaceSpacing = W / (TOTAL_COLUMNS + 1);
-      const rowSpacing = H / (LINE_COUNT + 1);
-      return { spaceSpacing, rowSpacing };
-    }
+function getSpacings() {
+  const spaceSpacing = W / (TOTAL_COLUMNS + 0.6); // ← was +1 before
+  const rowSpacing = H / (LINE_COUNT + 1);
+  return { spaceSpacing, rowSpacing };
+}
+
 function lineSpaceToCoords(row, space) {
   const { spaceSpacing, rowSpacing } = getSpacings();
   const x = spaceSpacing / 2 + space * spaceSpacing;
