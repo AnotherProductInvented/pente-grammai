@@ -179,21 +179,20 @@
     console.log("[DEBUG] Board constants:", {W, H, LINE_COUNT, TOTAL_COLUMNS, PIECE_RADIUS});
 
     // ***** NEW CODE: Define the movement path (yellow highlighted cells) *****
- const path = [
-  { row: 0, space: 0 },
-  { row: 1, space: 0 },
-  { row: 2, space: 0 },
-  { row: 3, space: 0 },
-  { row: 4, space: 0 },
-  { row: 4, space: 11 },
-  { row: 3, space: 11 },
-  { row: 2, space: 11 },
-  { row: 1, space: 11 },
-  { row: 0, space: 11 }
+const path = [
+  { row: 2, space: 1 },  // 1
+  { row: 1, space: 1 },  // 2
+  { row: 0, space: 1 },  // 3
+  { row: 0, space: 2 },  // 4
+  { row: 0, space: 3 },  // 5
+  { row: 1, space: 3 },  // 6
+  { row: 2, space: 3 },  // 7
+  { row: 2, space: 4 }   // 8
 ];
 
+
     // Define which index in the path is the "goal" cell.
-    const goalIndex = 8; // (Adjust this index to match your design.)
+    const goalIndex = 7; // (Adjust this index to match your design.)
 
     // --- Game State ---
     let pieces = [];  // Each piece: { row, space, color, isAI, phase }
@@ -338,7 +337,22 @@ if (currentIndex === -1) {
         showMessage("Target cell is occupied.");
         return;
       }
-
+      // Check if piece should disappear (goal logic)
+if (selectedPiece.color === 'blue' && currentIndex >= path.length - 1) {
+  // Only disappear if no other blue pieces remain in center
+  const stillInCenter = pieces.some(p => p.color === 'blue' && p.row === 2 && p !== selectedPiece);
+  if (!stillInCenter && !pieces.some(p => p.row === path[currentIndex].row && p.space === path[currentIndex].space)) {
+    pieces = pieces.filter(p => p !== selectedPiece);
+    addMoveToHistory("Blue piece reached goal and was removed.");
+    diceRolled = false;
+    diceValue = 0;
+    diceResultSpan.textContent = "0";
+    currentTurn = 'ai';
+    redrawBoard();
+    setTimeout(aiTurn, 1000);
+    return;
+  }
+}
       selectedPiece.row = path[currentIndex].row;
       selectedPiece.space = path[currentIndex].space;
       addMoveToHistory(`Human moved piece to row ${selectedPiece.row}, space ${selectedPiece.space}.`);
@@ -373,6 +387,16 @@ if (currentIndex === -1) {
         if (pieces.some(p => p !== aiPiece && p.row === path[currentIndex].row && p.space === path[currentIndex].space)) {
           continue;
         }
+        if (aiPiece.color === 'red' && currentIndex >= path.length - 1) {
+  const stillInCenter = pieces.some(p => p.color === 'red' && p.row === 2 && p !== aiPiece);
+  if (!stillInCenter && !pieces.some(p => p.row === path[currentIndex].row && p.space === path[currentIndex].space)) {
+    pieces = pieces.filter(p => p !== aiPiece);
+    addMoveToHistory("Red piece reached goal and was removed.");
+    moved = true;
+    break;
+  }
+}
+
         aiPiece.row = path[currentIndex].row;
         aiPiece.space = path[currentIndex].space;
         addMoveToHistory(`AI moved piece to row ${aiPiece.row}, space ${aiPiece.space} (dice=${diceValue}).`);
