@@ -400,7 +400,7 @@ function getSpacings() {
 
 function lineSpaceToCoords(row, space) {
   const { spaceSpacing, rowSpacing } = getSpacings();
-  const x = spaceSpacing / 2 + (space >= 7 ? space + 1 : space) * spaceSpacing;
+  const x = spaceSpacing / 2 + space * spaceSpacing;
   const y = (row + 1) * rowSpacing;
   return { x, y };
 }
