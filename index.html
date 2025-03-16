@@ -320,13 +320,7 @@
       let currentIndex = path.findIndex(pt => pt.row === selectedPiece.row && pt.space === selectedPiece.space);
       
       // If not on path, piece is still in start zone.
-      if (currentIndex === -1) {
-        if (diceValue !== 1) {
-          showMessage("You must roll a 1 to exit the start zone.");
-          return;
-        }
-        currentIndex = 0; // Exit to the first cell on the path.
-      } else {
+ else {
         // Advance by diceValue steps.
         currentIndex = (currentIndex + diceValue) % path.length;
       }
