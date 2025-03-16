@@ -393,14 +393,14 @@ if (currentIndex === -1) {
 
     // --- Utility Functions ---
 function getSpacings() {
-  const spaceSpacing = W / (TOTAL_COLUMNS + 0.6); // ← was +1 before
+  const spaceSpacing = W / (TOTAL_COLUMNS + 1);
   const rowSpacing = H / (LINE_COUNT + 1);
   return { spaceSpacing, rowSpacing };
 }
 
 function lineSpaceToCoords(row, space) {
   const { spaceSpacing, rowSpacing } = getSpacings();
-  const x = spaceSpacing / 2 + space * spaceSpacing;
+  const x = spaceSpacing / 2 + (space >= 7 ? space + 0.5 : space) * spaceSpacing;
   const y = (row + 1) * rowSpacing;
   return { x, y };
 }
