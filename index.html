@@ -180,16 +180,17 @@
 
     // ***** NEW CODE: Define the movement path (yellow highlighted cells) *****
     const path = [
-      { row: 0, space: 2 },
-      { row: 0, space: 8 },
-      { row: 1, space: 10 },
-      { row: 2, space: 11 },
-      { row: 3, space: 10 },
-      { row: 4, space: 8 },
-      { row: 4, space: 2 },
-      { row: 3, space: 0 },
-      { row: 2, space: 0 },
-      { row: 1, space: 0 }
+const path = [
+  { row: 0, space: 0 },
+  { row: 1, space: 0 },
+  { row: 2, space: 0 },
+  { row: 3, space: 0 },
+  { row: 4, space: 0 },
+  { row: 4, space: 11 },
+  { row: 3, space: 11 },
+  { row: 2, space: 11 },
+  { row: 1, space: 11 },
+  { row: 0, space: 11 }
     ];
     // Define which index in the path is the "goal" cell.
     const goalIndex = 8; // (Adjust this index to match your design.)
@@ -402,7 +403,7 @@ if (currentIndex === -1) {
       if (space === -1) x = PIECE_RADIUS;
       else if (space === TOTAL_COLUMNS) x = W - PIECE_RADIUS;
       else x = (space + 1) * spaceSpacing;
-      y = row * rowSpacing;
+      y = (row + 1) * rowSpacing;
 
       return { x, y };
     }
