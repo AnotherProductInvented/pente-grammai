@@ -399,7 +399,7 @@ if (currentIndex === -1) {
     }
 function lineSpaceToCoords(row, space) {
   const { spaceSpacing, rowSpacing } = getSpacings();
-  const x = space * spaceSpacing;
+  const x = space * spaceSpacing + PIECE_RADIUS;
   const y = (row + 1) * rowSpacing;
   return { x, y };
 }
