@@ -317,13 +317,13 @@
       if (!selectedPiece) return;
 
       // Find current index on the path.
-      let currentIndex = path.findIndex(pt => pt.row === selectedPiece.row && pt.space === selectedPiece.space);
-      
-      // If not on path, piece is still in start zone.
- else {
-        // Advance by diceValue steps.
-        currentIndex = (currentIndex + diceValue) % path.length;
-      }
+let currentIndex = path.findIndex(pt => pt.row === selectedPiece.row && pt.space === selectedPiece.space);
+
+if (currentIndex === -1) {
+  currentIndex = 0;
+} else {
+  currentIndex = (currentIndex + diceValue) % path.length;
+}
 
       // Goal rule: prevent entry into goal if any piece remains in start zone.
       if (currentIndex === goalIndex && pieces.some(p => p.row === 2 && path.findIndex(pt => pt.row === p.row && pt.space === p.space) === -1)) {
