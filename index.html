@@ -318,12 +318,111 @@ const path = [
 
       // Find current index on the path.
 let currentIndex = path.findIndex(pt => pt.row === selectedPiece.row && pt.space === selectedPiece.space);
-
 if (currentIndex === -1) {
-  currentIndex = 0;
-} else {
-  currentIndex = (currentIndex + diceValue) % path.length;
+  // This piece is not on path yet → try to enter
+  let entryIndex = selectedPiece.color === 'blue' ? path.length - 1 : 0;
+
+  // Check if diceValue is exactly enough to reach entry point
+  const entryPoint = path[entryIndex];
+  const distance = Math.abs(selectedPiece.space - entryPoint.space) + Math.abs(selectedPiece.row - entryPoint.row);
+  if (diceValue !== distance) {
+    showMessage("You need exact dice value to enter the path.");
+    return;
+  }
+
+  // Check if entry space is occupied
+  if (pieces.some(p => p.row === entryPoint.row && p.space === entryPoint.space)) {
+    showMessage("Entry space is occupied.");
+    return;
+  }
+
+  // Move piece to entry
+  selectedPiece.row = entryPoint.row;
+  selectedPiece.space = entryPoint.space;
+  addMoveToHistory(`Piece entered path at (${entryPoint.row}, ${entryPoint.space}).`);
+  diceRolled = false;
+  diceValue = 0;
+  diceResultSpan.textContent = "0";
+  currentTurn = 'ai';
+  redrawBoard();
+  setTimeout(aiTurn, 1000);
+  return;
 }
+
+   
+  diceRolled = false;
+  diceValue = 0;
+  diceResultSpan.textContent = "0";
+  currentTurn = 'ai';
+  redrawBoard();
+  setTimeout(aiTurn, 1000);
+  return;
+}
+
+
+let newIndex = currentIndex + diceValue;
+
+// If newIndex is off the path, don't move
+if (newIndex >= path.length) {
+  showMessage("Move goes off the path. Try another piece.");
+  return;
+}
+
+// Check if new path cell is occupied
+if (pieces.some(p => p !== selectedPiece && p.row === path[newIndex].row && p.space === path[newIndex].space)) {
+  showMessage("Target cell is occupied.");
+  return;
+}
+
+// Check goal condition
+if (selectedPiece.color === 'blue' && newIndex === path.length - 1) {
+  const stillInCenter = pieces.some(p => p.color === 'blue' && p.row === 2 && path.findIndex(pt => pt.row === p.row && pt.space === p.space) === -1);
+  if (!stillInCenter) {
+    pieces = pieces.filter(p => p !== selectedPiece);
+    addMoveToHistory("Blue piece exited the path and was removed.");
+    diceRolled = false;
+    diceValue = 0;
+    diceResultSpan.textContent = "0";
+    currentTurn = 'ai';
+    redrawBoard();
+    setTimeout(aiTurn, 1000);
+    return;
+  } else {
+    showMessage("Cannot remove blue piece. Pieces still in center.");
+    return;
+  }
+}
+if (selectedPiece.color === 'red' && newIndex === 0) {
+  const stillInCenter = pieces.some(p => p.color === 'red' && p.row === 2 && path.findIndex(pt => pt.row === p.row && pt.space === p.space) === -1);
+  if (!stillInCenter) {
+    pieces = pieces.filter(p => p !== selectedPiece);
+    addMoveToHistory("Red piece exited the path and was removed.");
+    diceRolled = false;
+    diceValue = 0;
+    diceResultSpan.textContent = "0";
+    currentTurn = 'ai';
+    redrawBoard();
+    setTimeout(aiTurn, 1000);
+    return;
+  } else {
+    showMessage("Cannot remove red piece. Pieces still in center.");
+    return;
+  }
+}
+
+// Regular movement
+selectedPiece.row = path[newIndex].row;
+selectedPiece.space = path[newIndex].space;
+addMoveToHistory(`Human moved piece to row ${selectedPiece.row}, space ${selectedPiece.space}.`);
+
+diceRolled = false;
+diceValue = 0;
+diceResultSpan.textContent = "0";
+currentTurn = 'ai';
+redrawBoard();
+setTimeout(aiTurn, 1000);
+
+
 
 
       // Goal rule: prevent entry into goal if any piece remains in start zone.
@@ -353,8 +452,9 @@ if (selectedPiece.color === 'blue' && currentIndex >= path.length - 1) {
     return;
   }
 }
-      selectedPiece.row = path[currentIndex].row;
-      selectedPiece.space = path[currentIndex].space;
+     selectedPiece.row = path[newIndex].row;
+     selectedPiece.space = path[newIndex].space;
+
       addMoveToHistory(`Human moved piece to row ${selectedPiece.row}, space ${selectedPiece.space}.`);
       
       diceRolled = false;
@@ -378,30 +478,70 @@ if (selectedPiece.color === 'blue' && currentIndex >= path.length - 1) {
 
       const aiPieces = pieces.filter(p => p.isAI);
       let moved = false;
-      for (let aiPiece of aiPieces) {
-        let currentIndex = path.findIndex(pt => pt.row === aiPiece.row && pt.space === aiPiece.space);
-        if (currentIndex === -1) currentIndex = 0;
-        else currentIndex = (currentIndex + moveDistance) % path.length;
-        
-        // Check if target cell is occupied.
-        if (pieces.some(p => p !== aiPiece && p.row === path[currentIndex].row && p.space === path[currentIndex].space)) {
-          continue;
-        }
-        if (aiPiece.color === 'red' && currentIndex >= path.length - 1) {
-  const stillInCenter = pieces.some(p => p.color === 'red' && p.row === 2 && p !== aiPiece);
-  if (!stillInCenter && !pieces.some(p => p.row === path[currentIndex].row && p.space === path[currentIndex].space)) {
-    pieces = pieces.filter(p => p !== aiPiece);
-    addMoveToHistory("Red piece reached goal and was removed.");
-    moved = true;
-    break;
-  }
+for (let aiPiece of aiPieces) {
+  let currentIndex = path.findIndex(pt => pt.row === aiPiece.row && pt.space === aiPiece.space);
+  if (currentIndex === -1) {
+  let entryIndex = aiPiece.color === 'red' ? 0 : path.length - 1;
+  const entryPoint = path[entryIndex];
+  const distance = Math.abs(aiPiece.space - entryPoint.space) + Math.abs(aiPiece.row - entryPoint.row);
+  if (moveDistance !== distance) continue;
+
+  // Check if entry space is occupied
+  if (pieces.some(p => p.row === entryPoint.row && p.space === entryPoint.space)) continue;
+
+  // Move to entry point
+  aiPiece.row = entryPoint.row;
+  aiPiece.space = entryPoint.space;
+  addMoveToHistory(`AI entered path at (${entryPoint.row}, ${entryPoint.space}).`);
+  moved = true;
+  break;
 }
 
-        aiPiece.row = path[currentIndex].row;
-        aiPiece.space = path[currentIndex].space;
-        addMoveToHistory(`AI moved piece to row ${aiPiece.row}, space ${aiPiece.space} (dice=${diceValue}).`);
-        moved = true;
-        break;
+
+  let newIndex = currentIndex + moveDistance;
+  if (newIndex >= path.length) continue; // can't move, off path
+
+  // Check if space is occupied
+  if (pieces.some(p => p !== aiPiece && p.row === path[newIndex].row && p.space === path[newIndex].space)) {
+    continue;
+  }
+
+  // Check goal removal for Red AI (reaching path index 0)
+  if (aiPiece.color === 'red' && newIndex === 0) {
+    const stillInCenter = pieces.some(p => p.color === 'red' && p.row === 2 && path.findIndex(pt => pt.row === p.row && pt.space === p.space) === -1);
+    if (!stillInCenter) {
+      pieces = pieces.filter(p => p !== aiPiece);
+      addMoveToHistory("Red AI piece exited and was removed.");
+      moved = true;
+      break;
+    } else {
+      addMoveToHistory("Red AI wanted to exit but still has pieces in center.");
+      continue;
+    }
+  }
+
+  // Check goal removal for Blue AI (in case you have Blue AI later)
+  if (aiPiece.color === 'blue' && newIndex === path.length - 1) {
+    const stillInCenter = pieces.some(p => p.color === 'blue' && p.row === 2 && path.findIndex(pt => pt.row === p.row && pt.space === p.space) === -1);
+    if (!stillInCenter) {
+      pieces = pieces.filter(p => p !== aiPiece);
+      addMoveToHistory("Blue AI piece exited and was removed.");
+      moved = true;
+      break;
+    } else {
+      addMoveToHistory("Blue AI wanted to exit but still has pieces in center.");
+      continue;
+    }
+  }
+
+  // Regular move
+  aiPiece.row = path[newIndex].row;
+  aiPiece.space = path[newIndex].space;
+  addMoveToHistory(`AI moved piece to row ${aiPiece.row}, space ${aiPiece.space} (dice=${diceValue}).`);
+  moved = true;
+  break;
+}
+
       }
       if (!moved) {
         addMoveToHistory("AI could not move any piece.");
