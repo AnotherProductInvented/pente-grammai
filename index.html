@@ -179,8 +179,7 @@
     console.log("[DEBUG] Board constants:", {W, H, LINE_COUNT, TOTAL_COLUMNS, PIECE_RADIUS});
 
     // ***** NEW CODE: Define the movement path (yellow highlighted cells) *****
-    const path = [
-const path = [
+ const path = [
   { row: 0, space: 0 },
   { row: 1, space: 0 },
   { row: 2, space: 0 },
@@ -191,7 +190,8 @@ const path = [
   { row: 2, space: 11 },
   { row: 1, space: 11 },
   { row: 0, space: 11 }
-    ];
+];
+
     // Define which index in the path is the "goal" cell.
     const goalIndex = 8; // (Adjust this index to match your design.)
 
@@ -397,16 +397,13 @@ if (currentIndex === -1) {
       const rowSpacing = H / (LINE_COUNT + 1);
       return { spaceSpacing, rowSpacing };
     }
-    function lineSpaceToCoords(row, space) {
-      const { spaceSpacing, rowSpacing } = getSpacings();
-      let x, y;
-      if (space === -1) x = PIECE_RADIUS;
-      else if (space === TOTAL_COLUMNS) x = W - PIECE_RADIUS;
-      else x = (space + 1) * spaceSpacing;
-      y = (row + 1) * rowSpacing;
+function lineSpaceToCoords(row, space) {
+  const { spaceSpacing, rowSpacing } = getSpacings();
+  const x = space * spaceSpacing;
+  const y = (row + 1) * rowSpacing;
+  return { x, y };
+}
 
-      return { x, y };
-    }
 
     // --- Drawing Functions ---
     function redrawBoard() {
