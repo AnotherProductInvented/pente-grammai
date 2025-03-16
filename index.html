@@ -399,10 +399,11 @@ if (currentIndex === -1) {
     }
 function lineSpaceToCoords(row, space) {
   const { spaceSpacing, rowSpacing } = getSpacings();
-  const x = (space + 0.5) * spaceSpacing;
+  const x = spaceSpacing / 2 + space * spaceSpacing;
   const y = (row + 1) * rowSpacing;
   return { x, y };
 }
+
 
 
 
