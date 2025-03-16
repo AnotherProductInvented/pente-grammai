@@ -321,7 +321,7 @@ let currentIndex = path.findIndex(pt => pt.row === selectedPiece.row && pt.space
 
 if (currentIndex === -1) {
   currentIndex = 0;
-} else {
+}
   currentIndex = (currentIndex + diceValue) % path.length;
 }
 
