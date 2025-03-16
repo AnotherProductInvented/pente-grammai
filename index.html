@@ -121,10 +121,10 @@
       <p>1) The game supports a standard dice roll.</p>
       <p>2) You have 5 blue pieces and the AI has 5 red pieces, all starting on the center line.</p>
       <p>3) Roll the dice and click your blue piece to attempt a move.</p>
-      <p>4) The objective is to move your pieces along a counterclockwise path of yellow highlighted cells until you reach the goal cell.</p>
-      <p>   When you choose "Left", your pieces move upward one row at a time until they reach the top (row 0).</p>
-      <p>   When you choose "Right", your pieces move downward until they reach the bottom (row 4).</p>
-      <p>   In any moved row (other than row 2) only one piece may occupy the highlighted cell (yellow) at column 6.</p>
+      <p>4) The objective is to move your pieces along a counterclockwise route of yellow highlighted cells (10 total, 2 per line) until you reach the goal cell.</p>
+      <p>   When you choose "Left", your pieces move upward one row at a time (toward row 0).</p>
+      <p>   When you choose "Right", your pieces move downward one row at a time (toward row 4).</p>
+      <p>   In any moved row (other than row 2) only one piece may occupy the yellow cell.</p>
       <p>   Also, you cannot enter the goal cell if any piece remains in the start zone.</p>
       <p>Press [M] to return to the Main Menu.</p>
     </div>
@@ -172,26 +172,29 @@
     const ctx = canvas.getContext("2d");
     const W = canvas.width;
     const H = canvas.height;
-    const LINE_COUNT = 5;         // Rows 0 (top) to 4 (bottom)
-    const TOTAL_COLUMNS = 12;     // Columns 0 to 11; our yellow highlight is at col 6.
+    const LINE_COUNT = 5;         // 5 lines: rows 0 to 4.
+    // TOTAL_COLUMNS is no longer used for movement; the path defines positions.
     const PIECE_RADIUS = 15;
     const HIT_TOLERANCE = 10;
-    console.log("[DEBUG] Board constants:", {W, H, LINE_COUNT, TOTAL_COLUMNS, PIECE_RADIUS});
+    console.log("[DEBUG] Board constants:", {W, H, LINE_COUNT, PIECE_RADIUS, HIT_TOLERANCE});
 
-    // ***** NEW CODE: Define the movement path (yellow highlighted cells) *****
-    // (This path is an example – adjust the coordinates as needed for your board.)
+    // ***** NEW CODE: Define the movement path (10 yellow highlighted cells) *****
+    // For 5 lines, 2 cells per line, arranged counterclockwise.
     const path = [
-      { row: 2, space: 1 },  // Entry cell (for blue, exit start zone)
-      { row: 1, space: 1 },
-      { row: 0, space: 1 },
-      { row: 0, space: 2 },
-      { row: 0, space: 3 },
-      { row: 1, space: 3 },
-      { row: 2, space: 3 },
-      { row: 2, space: 4 }   // Goal cell (example)
+      { row: 2, space: 0 },  // Index 0: Center line left
+      { row: 1, space: 0 },  // Index 1: Upper line left
+      { row: 0, space: 0 },  // Index 2: Top line left
+      { row: 0, space: 1 },  // Index 3: Top line right
+      { row: 1, space: 1 },  // Index 4: Upper line right
+      { row: 2, space: 1 },  // Index 5: Center line right
+      { row: 3, space: 1 },  // Index 6: Lower line right
+      { row: 4, space: 1 },  // Index 7: Bottom line right
+      { row: 4, space: 0 },  // Index 8: Bottom line left
+      { row: 3, space: 0 }   // Index 9: Lower line left
     ];
-    // Define which index in the path is the "goal" cell.
-    const goalIndex = 7; // Adjust this index as needed
+    // Define goal: For example, assume goal is index 5 (center line right)
+    const goalIndex = 5;
+    console.log("[DEBUG] Movement path defined. Goal index:", goalIndex);
 
     // --- Game State ---
     let pieces = [];  // Each piece: { row, space, color, isAI, phase }
@@ -200,7 +203,7 @@
     let diceRolled = false;
     let currentTurn = 'human';
     let gameState = 'menu';
-    // Default difficulty and side (set via overlay)
+    // Default difficulty and side; these are set via the overlay.
     let difficulty = 'medium';
     let humanSide = 'left';
     console.log("[DEBUG] Game state variables initialized");
@@ -226,9 +229,7 @@
       [menuScreen, instructionsScreen, difficultyScreen, gameOverScreen].forEach(screen => {
         screen.style.display = "none";
       });
-      if (overlay) {
-        overlay.style.display = "flex";
-      }
+      if (overlay) overlay.style.display = "flex";
     }
     console.log("[DEBUG] showOverlay defined");
 
@@ -243,30 +244,28 @@
       currentTurn = 'human';
       gameState = 'playing';
 
-      // All pieces start on the center row (row = 2), but not on the path.
+      // All pieces start in the center row (row 2) in distinct start cells.
       const startRow = 2;
       console.log("[DEBUG] startRow (center) =", startRow);
-
-      // Set starting positions based on side selection.
-      // For humanSide "left": Blue pieces appear in columns 1–5; Red pieces appear in columns 7–11.
-      // For humanSide "right": Blue pieces appear in columns 7–11; Red pieces appear in columns 1–5.
       if (humanSide === 'left') {
+        // Blue pieces (human) start in cells not on the path.
         for (let i = 0; i < 5; i++) {
-          pieces.push({ row: startRow, space: 1 + i, color: 'blue', isAI: false, phase: 'start' });
-          console.log("[DEBUG] Added blue piece at row", startRow, "space =", 1 + i);
+          pieces.push({ row: startRow, space: 3 + i, color: 'blue', isAI: false, phase: 'start' });
+          console.log("[DEBUG] Added blue piece at row", startRow, "space =", 3 + i);
+        }
+        // Red pieces (AI) start in different cells.
+        for (let i = 0; i < 5; i++) {
+          pieces.push({ row: startRow, space: 8 + i, color: 'red', isAI: true, phase: 'start' });
+          console.log("[DEBUG] Added red piece at row", startRow, "space =", 8 + i);
+        }
+      } else { // humanSide === 'right'
+        for (let i = 0; i < 5; i++) {
+          pieces.push({ row: startRow, space: 8 + i, color: 'blue', isAI: false, phase: 'start' });
+          console.log("[DEBUG] Added blue piece at row", startRow, "space =", 8 + i);
         }
         for (let i = 0; i < 5; i++) {
-          pieces.push({ row: startRow, space: 7 + i, color: 'red', isAI: true, phase: 'start' });
-          console.log("[DEBUG] Added red piece at row", startRow, "space =", 7 + i);
-        }
-      } else {
-        for (let i = 0; i < 5; i++) {
-          pieces.push({ row: startRow, space: 7 + i, color: 'blue', isAI: false, phase: 'start' });
-          console.log("[DEBUG] Added blue piece at row", startRow, "space =", 7 + i);
-        }
-        for (let i = 0; i < 5; i++) {
-          pieces.push({ row: startRow, space: 1 + i, color: 'red', isAI: true, phase: 'start' });
-          console.log("[DEBUG] Added red piece at row", startRow, "space =", 1 + i);
+          pieces.push({ row: startRow, space: 3 + i, color: 'red', isAI: true, phase: 'start' });
+          console.log("[DEBUG] Added red piece at row", startRow, "space =", 3 + i);
         }
       }
       addMoveToHistory(`New game started. Side=${humanSide}, Difficulty=${difficulty}.`);
@@ -316,18 +315,27 @@
       );
       if (!selectedPiece) return;
 
-      // Find the current index of the piece on the path.
+      // Find current index on the path.
       let currentIndex = path.findIndex(pt => pt.row === selectedPiece.row && pt.space === selectedPiece.space);
       if (currentIndex === -1) {
-        // Piece is not on the path (i.e. still in start zone). For human pieces, allow exit only if diceValue === 1.
-        if (diceValue !== 1) {
-          showMessage("You must roll a 1 to exit the start zone.");
+        // The piece is not on the path yet; it is in the start zone.
+        // It can only enter the path if the die roll equals the Manhattan distance to its designated entry.
+        // For example, for blue pieces (human) we designate the entry as the last cell in the path.
+        let entryIndex = selectedPiece.color === 'blue' ? path.length - 1 : 0;
+        const entryPoint = path[entryIndex];
+        const distance = Math.abs(selectedPiece.space - entryPoint.space) + Math.abs(selectedPiece.row - entryPoint.row);
+        if (diceValue !== distance) {
+          showMessage("Exact dice value required to enter the path.");
           return;
         }
-        currentIndex = 0; // Enter the path at index 0.
+        currentIndex = entryIndex;
       } else {
-        // Advance along the path by the number on the die.
-        currentIndex = (currentIndex + diceValue) % path.length;
+        // Advance along the path by the dice value.
+        currentIndex = currentIndex + diceValue;
+        if (currentIndex >= path.length) {
+          showMessage("Move goes off the path. Try another piece.");
+          return;
+        }
       }
 
       // Prevent entering the goal cell if any blue piece is still in the start zone.
@@ -342,7 +350,26 @@
         return;
       }
 
-      // Move the piece.
+      // If the piece reaches the goal cell, remove it.
+      if (selectedPiece.color === 'blue' && currentIndex === goalIndex) {
+        // Only allow removal if no blue pieces remain in the start zone.
+        if (!pieces.some(p => p.color === 'blue' && p.row === 2 && p !== selectedPiece)) {
+          pieces = pieces.filter(p => p !== selectedPiece);
+          addMoveToHistory("Blue piece reached goal and was removed.");
+          diceRolled = false;
+          diceValue = 0;
+          diceResultSpan.textContent = "0";
+          currentTurn = 'ai';
+          redrawBoard();
+          setTimeout(aiTurn, 1000);
+          return;
+        } else {
+          showMessage("Cannot remove piece; pieces still in start zone.");
+          return;
+        }
+      }
+
+      // Regular movement.
       selectedPiece.row = path[currentIndex].row;
       selectedPiece.space = path[currentIndex].space;
       addMoveToHistory(`Human moved piece to row ${selectedPiece.row}, space ${selectedPiece.space}.`);
@@ -371,11 +398,20 @@
       for (let aiPiece of aiPieces) {
         let currentIndex = path.findIndex(pt => pt.row === aiPiece.row && pt.space === aiPiece.space);
         if (currentIndex === -1) currentIndex = 0;
-        else currentIndex = (currentIndex + moveDistance) % path.length;
-        
-        // Check occupancy.
-        if (pieces.some(p => p !== aiPiece && p.row === path[currentIndex].row && p.space === path[currentIndex].space)) {
-          continue;
+        else currentIndex = currentIndex + moveDistance;
+        if (currentIndex >= path.length) continue;
+        if (pieces.some(p => p !== aiPiece && p.row === path[currentIndex].row && p.space === path[currentIndex].space)) continue;
+        // For red pieces, if the target is the goal (assume index 0 for red exit) and pieces remain in start zone, do not remove.
+        if (aiPiece.color === 'red' && currentIndex === 0) {
+          if (pieces.some(p => p.color === 'red' && p.row === 2 && p !== aiPiece)) {
+            addMoveToHistory("Red AI cannot exit because pieces remain in start zone.");
+            continue;
+          } else {
+            pieces = pieces.filter(p => p !== aiPiece);
+            addMoveToHistory("Red AI piece exited and was removed.");
+            moved = true;
+            break;
+          }
         }
         aiPiece.row = path[currentIndex].row;
         aiPiece.space = path[currentIndex].space;
@@ -401,14 +437,12 @@
       const rowSpacing = H / (LINE_COUNT + 1);
       return { spaceSpacing, rowSpacing };
     }
-function lineSpaceToCoords(row, space) {
-  const { spaceSpacing, rowSpacing } = getSpacings();
-  // Center the piece in its cell:
-  const x = (space + 1) * spaceSpacing;
-  const y = (row + 1) * rowSpacing;
-  return { x, y };
-}
-
+    function lineSpaceToCoords(row, space) {
+      const { spaceSpacing, rowSpacing } = getSpacings();
+      const x = (space + 1) * spaceSpacing;
+      const y = (row + 1) * rowSpacing;
+      return { x, y };
+    }
 
     // --- Drawing Functions ---
     function redrawBoard() {
@@ -487,7 +521,7 @@ function lineSpaceToCoords(row, space) {
     console.log("[DEBUG] Initial setup: showing menu and drawing board");
     showOverlay(menuScreen);
     redrawBoard();
-    addMoveToHistory("Press 'New Game', then choose Left or Right side and a difficulty, roll dice, and click your blue piece to move to the highlighted cell.");
+    addMoveToHistory("Press 'New Game', then choose Left or Right side and a difficulty, roll dice, and click your blue piece to move along the path.");
   </script>
 </body>
 </html>
