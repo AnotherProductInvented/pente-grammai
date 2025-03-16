@@ -398,11 +398,12 @@ if (currentIndex === -1) {
       return { spaceSpacing, rowSpacing };
     }
 function lineSpaceToCoords(row, space) {
-  const { rowSpacing } = getSpacings();
-  const x = (space / (TOTAL_COLUMNS - 1)) * W;
+  const { spaceSpacing, rowSpacing } = getSpacings();
+  const x = (space + 0.5) * spaceSpacing;
   const y = (row + 1) * rowSpacing;
   return { x, y };
 }
+
 
 
 
