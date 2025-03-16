@@ -402,7 +402,8 @@ if (currentIndex === -1) {
       if (space === -1) x = PIECE_RADIUS;
       else if (space === TOTAL_COLUMNS) x = W - PIECE_RADIUS;
       else x = (space + 1) * spaceSpacing;
-      y = (row + 1) * rowSpacing;
+      y = row * rowSpacing;
+
       return { x, y };
     }
 
