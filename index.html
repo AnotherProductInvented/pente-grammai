@@ -401,12 +401,14 @@
       const rowSpacing = H / (LINE_COUNT + 1);
       return { spaceSpacing, rowSpacing };
     }
-    function lineSpaceToCoords(row, space) {
-      const { spaceSpacing, rowSpacing } = getSpacings();
-      const x = spaceSpacing / 2 + space * spaceSpacing;
-      const y = (row + 1) * rowSpacing;
-      return { x, y };
-    }
+function lineSpaceToCoords(row, space) {
+  const { spaceSpacing, rowSpacing } = getSpacings();
+  // Center the piece in its cell:
+  const x = (space + 1) * spaceSpacing;
+  const y = (row + 1) * rowSpacing;
+  return { x, y };
+}
+
 
     // --- Drawing Functions ---
     function redrawBoard() {
